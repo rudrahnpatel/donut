@@ -32,11 +32,20 @@ Setup, which needs the user's own OAuth clients, is in `docs/google-setup.md`.
 - **Device sync** (`merge.dart`, `sync_store.dart`, `drive_sync.dart`):
   - Every synced row carries an HLC, and deletions are tombstone rows (`deleted: true`).
   - `SyncStore.snapshot` dumps the synced tables as JSON via Drift's `toJson`.
-  - `DriveSync.run` downloads every *other* device's `donut-state-<device>.json`, then
-    `rowsToApply` picks, per row, the copy with the newest HLC, and only rows newer than
-    the local copy are written.
-  - It then uploads this device's own file. The local HLC clock is advanced past anything
+  - `DriveSync.run` lists the whole app folder (no `q`: Drive's `name contains` is a
+    word-prefix search over an index that lags for new files) and downloads every *other*
+    device's `donut-state-<device>.json` whose `version` changed since the last merge
+    (`DriveSyncMemo`). `rowsToApply` picks, per row, the copy with the newest HLC, and only
+    rows newer than the local copy are written.
+  - It uploads this device's own file only when its newest HLC moved since the last upload,
+    so a quiet poll is a single list call. The local HLC clock is advanced past anything
     received.
+  - After applying remote tasks, `SyncStore.mergeDuplicateActivities` folds same-named
+    tasks into one. Each device seeds its own starter tasks with random ids, so two
+    devices meeting would otherwise show "Study" twice. The kept id is the smallest, so
+    every device picks the same one. It takes the fields of the most recently edited copy.
+    Entries, to-dos, repeats, templates and sketches pointing at the others are moved over
+    with fresh HLCs. Starter tasks are stamped `000…-seed`, older than any real edit.
   - `deviceSettings` (sync mode, reminders on/off, theme, AMOLED, dynamic colour, seed)
     never leave or enter a device.
 - **Calendar mirror** (`calendar_sync.dart`):
@@ -59,8 +68,9 @@ Setup, which needs the user's own OAuth clients, is in `docs/google-setup.md`.
     today and tomorrow. The result is cached in `LocalKv` so the arcs appear offline.
 - **Controller** (`sync_controller.dart`):
   - Restores sign-in at start.
-  - Syncs at start, on resume, 20 s after the last local change to a synced table, and
-    every 10 minutes.
+  - Syncs at start, on resume, 3 s after the last local change to a synced table, and
+    every 30 s while the app is in the foreground (paused when hidden or in the
+    background). Busy times are refetched at most every 10 minutes.
   - Only one sync runs at a time (`busy`).
   - Errors become a one-line status (offline / Google error / "allow access again").
 
@@ -102,6 +112,11 @@ sequenceDiagram
   rather than duplicates, and a reinstall finds the same events. Entries that came from
   Google keep their event's id for the same reason. An earlier version re-encoded
   `gcal-<id>` and inserted a copy on the first push back.
+- **Polling every 30 s.** Drive offers push notifications only to a public webhook, which a
+  personal app doesn't have. The first version polled every 10 minutes and re-downloaded
+  and re-uploaded everything each time; in use, a delete on the phone took up to 10 minutes
+  to reach the desktop, which felt broken. Memoising file versions and the last uploaded
+  HLC made frequent polls cheap enough.
 - **Per-device settings.** Grants are per device. If the laptop switching to Calendar mode
   synced to a phone that only granted Drive access, every sync on the phone would fail
   until it re-consented. Reminder permission and screen preferences (AMOLED) are
