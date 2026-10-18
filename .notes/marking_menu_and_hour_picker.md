@@ -14,6 +14,10 @@
   upward item, or sit beside a sideways item. Rows are picked by the row level with the
   finger once it is 20 dp from the item; the first row is nearest, so a straight flick
   picks it. A card sits behind the rows so they read over the agenda.
+- While the menu is up the dial is dimmed (50 % scrim). Once a sub-menu opens, earlier
+  levels show only the item it came from, the trail back; the others return if you back
+  out. Before this, a side list hung below a pin item landed on the Label item, and the
+  selected entry's handles and the hub text showed through.
 - **Hour picker** (hold the hub, on the day dial or the hour dial): two rings of hour
   numerals for the day being shown — inner ring AM, outer ring PM, like the day dial. Slide to
   an hour and release to jump there. (A first version rolled from "now" into tomorrow; the

@@ -65,10 +65,16 @@ class _MarkingMenuLayerState extends State<MarkingMenuLayer> {
 
     final stack = Stack(
       children: [
-        // Light scrim so the fan reads over the clock.
+        // The dial steps back while the menu is up, so entries, handles and
+        // the hub's text don't compete with the items.
         Positioned.fill(
           child: IgnorePointer(
-            child: ColoredBox(color: scheme.scrim.withValues(alpha: 0.12)),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 0.5),
+              duration: const Duration(milliseconds: 160),
+              builder: (_, a, _) =>
+                  ColoredBox(color: scheme.scrim.withValues(alpha: a)),
+            ),
           ),
         ),
         Positioned.fill(
@@ -76,9 +82,12 @@ class _MarkingMenuLayerState extends State<MarkingMenuLayer> {
             child: CustomPaint(painter: _SpokesPainter(c, scheme)),
           ),
         ),
+        // Once a sub-menu opens, earlier levels keep only the item it came
+        // from (the trail back); the rest step aside until it closes.
         for (var li = 0; li < c.levels.length; li++)
           for (var i = 0; i < c.levels[li].items.length; i++)
-            _item(context, c.levels[li], li, i, scheme),
+            if (li == c.levels.length - 1 || c.levels[li].highlighted == i)
+              _item(context, c.levels[li], li, i, scheme),
         if (label != null)
           Positioned(
             left: 0,
@@ -323,9 +332,11 @@ class _SpokesPainter extends CustomPainter {
           );
         }
       }
+      final top = level == c.levels.last;
       for (var i = 0; i < level.items.length; i++) {
         final p = level.itemPos(i);
         final highlighted = level.highlighted == i;
+        if (!top && !highlighted) continue;
         canvas.drawLine(
           level.center,
           Offset.lerp(level.center, p, 0.7)!,

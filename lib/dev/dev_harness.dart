@@ -225,7 +225,10 @@ class DevHarness {
 
     // A block visible on the current dial to press on.
     final s = geo.spec;
-    final target = s.isHour ? today + s.origin + 30 : today + 15 * 60;
+    // DONUT_AT: minutes past the dial's start to press (default: half past
+    // on the hour dial, 3 PM on the day dial).
+    final atEnv = int.tryParse(Platform.environment['DONUT_AT'] ?? '');
+    final target = today + s.origin + (atEnv ?? (s.isHour ? 30 : 15 * 60));
     switch (scene) {
       case 'menu':
         down(at(target));
