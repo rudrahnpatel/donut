@@ -98,4 +98,22 @@ void main() {
     });
     expect(s.newestHlc, '000000000000020-00000-a');
   });
+
+  test('per-device settings never come in from another device', () {
+    final local = snap('phone', {
+      'settings': [
+        {'key': 'syncMode', 'value': '"device"', 'hlc': '1'},
+      ],
+    });
+    final laptop = snap('laptop', {
+      'settings': [
+        {'key': 'syncMode', 'value': '"calendar"', 'hlc': '9'},
+        {'key': 'amoled', 'value': 'true', 'hlc': '9'},
+        {'key': 'snapStep', 'value': '10', 'hlc': '9'},
+      ],
+    });
+    expect(rowsToApply(local, [laptop])['settings'], [
+      {'key': 'snapStep', 'value': '10', 'hlc': '9'},
+    ]);
+  });
 }

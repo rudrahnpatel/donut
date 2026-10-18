@@ -17,6 +17,18 @@ const syncedTables = <String, String>{
   'settings': 'key',
 };
 
+/// Settings that belong to one device and never sync: each device has its
+/// own Google grants (a phone with Drive-only access must not be switched
+/// to calendar mode by the laptop), notification permission and screen.
+const deviceSettings = {
+  'syncMode',
+  'remindersEnabled',
+  'theme',
+  'amoled',
+  'useDynamicColor',
+  'seedColor',
+};
+
 typedef Row = Map<String, dynamic>;
 
 /// All synced rows of one device, as JSON, keyed by table then row id.
@@ -66,6 +78,7 @@ Map<String, List<Row>> rowsToApply(Snapshot local, Iterable<Snapshot> remotes) {
     for (final remote in remotes) {
       for (final MapEntry(key: id, value: row)
           in (remote.tables[table] ?? const {}).entries) {
+        if (table == 'settings' && deviceSettings.contains(id)) continue;
         final current = best[id] ?? local.tables[table]?[id];
         if (current == null || _newer(row, current)) best[id] = row;
       }

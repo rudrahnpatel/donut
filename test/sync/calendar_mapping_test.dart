@@ -63,6 +63,8 @@ void main() {
     expect(b.id, 'gcal-xyz123');
     expect(b.note, 'Dentist');
     expect(b.durMin, 60);
+    // Pushing it back updates that same event instead of adding a copy.
+    expect(eventIdFor(b.id), 'xyz123');
   });
 
   test('all-day events are skipped; cancelled ones become deletions', () {

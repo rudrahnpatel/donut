@@ -8,10 +8,18 @@ import '../../core/time/day_minutes.dart';
 import '../../core/time/hlc.dart';
 import '../../data/db/app_database.dart';
 
+/// Entries that started as events made in Google Calendar: their id is
+/// this prefix plus the event's own id.
+const _fromGoogle = 'gcal-';
+
 /// The Google event id for an entry: lowercase base32hex (0-9, a-v),
 /// 5–1024 characters. UUIDs minus dashes already qualify; anything else is
-/// hex-encoded. Deterministic, so retries can never create duplicates.
+/// hex-encoded. Deterministic, so retries can never create duplicates. An
+/// entry that came from a Google event maps back to that event.
 String eventIdFor(String blockId) {
+  if (blockId.startsWith(_fromGoogle)) {
+    return blockId.substring(_fromGoogle.length);
+  }
   final plain = blockId.toLowerCase().replaceAll('-', '');
   if (RegExp(r'^[0-9a-v]{5,1024}$').hasMatch(plain)) return plain;
   return utf8
@@ -69,7 +77,7 @@ blockFromEvent(cal.Event e) {
   final s = start == null ? 0 : absMinuteOf(start.toLocal());
   final en = end == null ? s : absMinuteOf(end.toLocal());
   return (
-    id: donutId ?? 'gcal-${e.id}',
+    id: donutId ?? '$_fromGoogle${e.id}',
     startMin: s,
     durMin: (en - s).clamp(1, minutesPerDay),
     // An event made in Google Calendar has no label of ours: use its title.
@@ -159,6 +167,9 @@ class CalendarSync {
     )..where((t) => t.hlc.isBiggerThanValue(since))).get();
     var n = 0;
     for (final b in changed) {
+      // First push: deleted entries were never sent, so there's nothing to
+      // remove.
+      if (b.deleted && since.isEmpty) continue;
       final id = eventIdFor(b.id);
       if (b.deleted) {
         try {

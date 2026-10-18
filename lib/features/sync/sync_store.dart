@@ -26,7 +26,8 @@ class SyncStore {
       for (final r in await _db.select(_db.series).get()) r.id: r.toJson(),
     },
     'settings': {
-      for (final r in await _db.select(_db.settings).get()) r.key: r.toJson(),
+      for (final r in await _db.select(_db.settings).get())
+        if (!deviceSettings.contains(r.key)) r.key: r.toJson(),
     },
   });
 
