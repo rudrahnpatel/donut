@@ -60,9 +60,16 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _onNewDay();
-      ref.read(syncControllerProvider.notifier).syncNow();
+    final sync = ref.read(syncControllerProvider.notifier);
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _onNewDay();
+        sync.setForeground(true);
+        sync.syncNow();
+      case AppLifecycleState.hidden || AppLifecycleState.paused:
+        sync.setForeground(false);
+      case AppLifecycleState.inactive || AppLifecycleState.detached:
+        break;
     }
   }
 

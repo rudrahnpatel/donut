@@ -95,8 +95,8 @@ class CalendarSyncResult {
   final int pulled;
 
   /// Busy times on your other calendars, today and tomorrow, as absolute
-  /// floating minutes: the ghost arcs.
-  final List<(int, int)> busy;
+  /// floating minutes: the ghost arcs. Null when not fetched this run.
+  final List<(int, int)>? busy;
 }
 
 /// Two-way mirror between saved entries and a dedicated "Donut" Google
@@ -118,13 +118,17 @@ class CalendarSync {
   static const _pushedKey = 'gcal_pushed_hlc';
   static const _tokenKey = 'gcal_sync_token';
 
-  Future<CalendarSyncResult> run(http.Client client) async {
+  /// Pushes and pulls entries; also refreshes busy times if [busy].
+  Future<CalendarSyncResult> run(http.Client client, {bool busy = true}) async {
     final api = cal.CalendarApi(client);
     final calId = await _ensureCalendar(api);
     final pushed = await _push(api, calId);
     final pulled = await _pull(api, calId);
-    final busy = await _busy(api, calId);
-    return CalendarSyncResult(pushed, pulled, busy);
+    return CalendarSyncResult(
+      pushed,
+      pulled,
+      busy ? await _busy(api, calId) : null,
+    );
   }
 
   /// Finds the Donut calendar (stored id, else by name) or creates it, so a

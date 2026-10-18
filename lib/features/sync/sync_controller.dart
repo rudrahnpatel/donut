@@ -84,8 +84,9 @@ final syncControllerProvider = NotifierProvider<SyncController, SyncStatus>(
 );
 
 /// Signs in, runs device sync (Drive) and, in calendar mode, the Donut
-/// calendar mirror. Syncs at start, on resume, 20 s after local edits and
-/// every 10 minutes while the app is open.
+/// calendar mirror. Syncs at start, on resume, 3 s after local edits and
+/// every 30 s while the app is in the foreground; a quiet poll is one Drive
+/// list call (plus one calendar call in calendar mode).
 class SyncController extends Notifier<SyncStatus> {
   late final GoogleAuth _auth = GoogleAuth();
   bool _started = false;
@@ -93,9 +94,14 @@ class SyncController extends Notifier<SyncStatus> {
   Timer? _periodic;
   StreamSubscription<void>? _changes;
   String? _timeZone;
+  final _drive = DriveSyncMemo();
+  DateTime _busyAt = DateTime(0);
+  bool _foreground = true;
   Completer<void>? _cancelConsent;
 
   static const _ghostsKey = 'gcal_ghosts';
+  static const _poll = Duration(seconds: 30);
+  static const _busyEvery = Duration(minutes: 10);
 
   @override
   SyncStatus build() {
@@ -140,8 +146,21 @@ class SyncController extends Notifier<SyncStatus> {
           ]),
         )
         .listen((_) => _schedule());
-    _periodic = Timer.periodic(const Duration(minutes: 10), (_) => syncNow());
+    _periodic = Timer.periodic(_poll, (_) => syncNow());
     await syncNow();
+  }
+
+  /// Polls only while the app is in the foreground; coming back syncs at
+  /// once.
+  void setForeground(bool foreground) {
+    if (!_started || foreground == _foreground) return;
+    _foreground = foreground;
+    _periodic?.cancel();
+    _periodic = null;
+    if (foreground) {
+      _periodic = Timer.periodic(_poll, (_) => syncNow());
+      syncNow();
+    }
   }
 
   /// Syncs a little after local edits settle. Writes made by a sync itself
@@ -149,7 +168,7 @@ class SyncController extends Notifier<SyncStatus> {
   void _schedule() {
     if (!state.signedIn || state.busy || _mode == SyncMode.off) return;
     _debounce?.cancel();
-    _debounce = Timer(const Duration(seconds: 20), syncNow);
+    _debounce = Timer(const Duration(seconds: 3), syncNow);
   }
 
   Future<void> signIn() async {
@@ -192,6 +211,8 @@ class SyncController extends Notifier<SyncStatus> {
 
   Future<void> signOut() async {
     await _auth.signOut();
+    _drive.versions.clear();
+    _drive.uploadedHlc = null;
     ref.read(ghostsProvider.notifier).set(const []);
     state = const SyncStatus();
   }
@@ -218,6 +239,7 @@ class SyncController extends Notifier<SyncStatus> {
     if (mode != SyncMode.calendar) {
       ref.read(ghostsProvider.notifier).set(const []);
     }
+    _busyAt = DateTime(0);
     await _setModeSetting(mode);
     await syncNow();
   }
@@ -243,6 +265,7 @@ class SyncController extends Notifier<SyncStatus> {
         final merged = await DriveSync(
           SyncStore(db, clock),
           device,
+          _drive,
         ).run(client);
         var summary = merged == 0 ? 'Up to date' : '$merged changes merged';
         if (mode == SyncMode.calendar) {
@@ -253,14 +276,17 @@ class SyncController extends Notifier<SyncStatus> {
             titleFor: (b) => b.note ?? activities[b.activityId]?.name,
             timeZone: _timeZone ??=
                 (await FlutterTimezone.getLocalTimezone()).identifier,
-          ).run(client);
-          ref.read(ghostsProvider.notifier).set(result.busy);
-          await db.setLocal(
-            _ghostsKey,
-            jsonEncode([
-              for (final (s, e) in result.busy) [s, e],
-            ]),
-          );
+          ).run(client, busy: DateTime.now().difference(_busyAt) > _busyEvery);
+          if (result.busy case final busy?) {
+            _busyAt = DateTime.now();
+            ref.read(ghostsProvider.notifier).set(busy);
+            await db.setLocal(
+              _ghostsKey,
+              jsonEncode([
+                for (final (s, e) in busy) [s, e],
+              ]),
+            );
+          }
           summary += ' · calendar ↑${result.pushed} ↓${result.pulled}';
         }
         state = state.copyWith(

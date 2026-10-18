@@ -23,6 +23,11 @@ class LibraryRepo {
     ('Fun', '🎮', 0xFF43B581),
   ];
 
+  /// Starter tasks are stamped older than any real edit, so when a new
+  /// device's untouched copies meet edited ones from another device during
+  /// sync, the edits win (see `SyncStore.mergeDuplicateActivities`).
+  static const _seedHlc = '000000000000000-00000-seed';
+
   /// Seeds starter activities on a fresh install.
   Future<void> seedIfEmpty() async {
     if (await _db.getLocal('seeded') != null) return;
@@ -37,7 +42,7 @@ class LibraryRepo {
             emoji: emoji,
             color: color,
             sortOrder: Value(i),
-            hlc: _clock.now(),
+            hlc: _seedHlc,
           ),
         );
       }
