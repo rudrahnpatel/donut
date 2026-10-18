@@ -27,6 +27,13 @@ class SyncStore {
     'series': {
       for (final r in await _db.select(_db.series).get()) r.id: r.toJson(),
     },
+    // Plan-mode pins stay on this device until ✓.
+    'pins': {
+      for (final r in await (_db.select(
+        _db.pins,
+      )..where((t) => t.draft.equals(false))).get())
+        r.id: r.toJson(),
+    },
     'settings': {
       for (final r in await _db.select(_db.settings).get())
         if (!deviceSettings.contains(r.key)) r.key: r.toJson(),
@@ -62,6 +69,10 @@ class SyncStore {
               await _db
                   .into(_db.series)
                   .insertOnConflictUpdate(SeriesRow.fromJson(json));
+            case 'pins':
+              await _db
+                  .into(_db.pins)
+                  .insertOnConflictUpdate(PinRow.fromJson(json));
             case 'settings':
               await _db
                   .into(_db.settings)

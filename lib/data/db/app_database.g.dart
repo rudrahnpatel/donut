@@ -3455,6 +3455,460 @@ class SeriesCompanion extends UpdateCompanion<SeriesRow> {
   }
 }
 
+class $PinsTable extends Pins with TableInfo<$PinsTable, PinRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PinsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _atMinMeta = const VerificationMeta('atMin');
+  @override
+  late final GeneratedColumn<int> atMin = GeneratedColumn<int>(
+    'at_min',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _draftMeta = const VerificationMeta('draft');
+  @override
+  late final GeneratedColumn<bool> draft = GeneratedColumn<bool>(
+    'draft',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("draft" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    atMin,
+    kind,
+    label,
+    draft,
+    hlc,
+    deleted,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pins';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PinRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('at_min')) {
+      context.handle(
+        _atMinMeta,
+        atMin.isAcceptableOrUnknown(data['at_min']!, _atMinMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_atMinMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
+    if (data.containsKey('draft')) {
+      context.handle(
+        _draftMeta,
+        draft.isAcceptableOrUnknown(data['draft']!, _draftMeta),
+      );
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(
+        _hlcMeta,
+        hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hlcMeta);
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PinRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PinRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      atMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}at_min'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      ),
+      draft: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}draft'],
+      )!,
+      hlc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hlc'],
+      )!,
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
+    );
+  }
+
+  @override
+  $PinsTable createAlias(String alias) {
+    return $PinsTable(attachedDatabase, alias);
+  }
+}
+
+class PinRow extends DataClass implements Insertable<PinRow> {
+  final String id;
+
+  /// Floating local minute, like blocks.
+  final int atMin;
+
+  /// `reachBy`, `meetingAt`, `leaveBy` or `custom` (see `PinKind`).
+  final String kind;
+
+  /// The text of a custom pin.
+  final String? label;
+  final bool draft;
+  final String hlc;
+  final bool deleted;
+  const PinRow({
+    required this.id,
+    required this.atMin,
+    required this.kind,
+    this.label,
+    required this.draft,
+    required this.hlc,
+    required this.deleted,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['at_min'] = Variable<int>(atMin);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
+    map['draft'] = Variable<bool>(draft);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    return map;
+  }
+
+  PinsCompanion toCompanion(bool nullToAbsent) {
+    return PinsCompanion(
+      id: Value(id),
+      atMin: Value(atMin),
+      kind: Value(kind),
+      label: label == null && nullToAbsent
+          ? const Value.absent()
+          : Value(label),
+      draft: Value(draft),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+    );
+  }
+
+  factory PinRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PinRow(
+      id: serializer.fromJson<String>(json['id']),
+      atMin: serializer.fromJson<int>(json['atMin']),
+      kind: serializer.fromJson<String>(json['kind']),
+      label: serializer.fromJson<String?>(json['label']),
+      draft: serializer.fromJson<bool>(json['draft']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'atMin': serializer.toJson<int>(atMin),
+      'kind': serializer.toJson<String>(kind),
+      'label': serializer.toJson<String?>(label),
+      'draft': serializer.toJson<bool>(draft),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+    };
+  }
+
+  PinRow copyWith({
+    String? id,
+    int? atMin,
+    String? kind,
+    Value<String?> label = const Value.absent(),
+    bool? draft,
+    String? hlc,
+    bool? deleted,
+  }) => PinRow(
+    id: id ?? this.id,
+    atMin: atMin ?? this.atMin,
+    kind: kind ?? this.kind,
+    label: label.present ? label.value : this.label,
+    draft: draft ?? this.draft,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+  );
+  PinRow copyWithCompanion(PinsCompanion data) {
+    return PinRow(
+      id: data.id.present ? data.id.value : this.id,
+      atMin: data.atMin.present ? data.atMin.value : this.atMin,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      label: data.label.present ? data.label.value : this.label,
+      draft: data.draft.present ? data.draft.value : this.draft,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PinRow(')
+          ..write('id: $id, ')
+          ..write('atMin: $atMin, ')
+          ..write('kind: $kind, ')
+          ..write('label: $label, ')
+          ..write('draft: $draft, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, atMin, kind, label, draft, hlc, deleted);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PinRow &&
+          other.id == this.id &&
+          other.atMin == this.atMin &&
+          other.kind == this.kind &&
+          other.label == this.label &&
+          other.draft == this.draft &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted);
+}
+
+class PinsCompanion extends UpdateCompanion<PinRow> {
+  final Value<String> id;
+  final Value<int> atMin;
+  final Value<String> kind;
+  final Value<String?> label;
+  final Value<bool> draft;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<int> rowid;
+  const PinsCompanion({
+    this.id = const Value.absent(),
+    this.atMin = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.label = const Value.absent(),
+    this.draft = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PinsCompanion.insert({
+    required String id,
+    required int atMin,
+    required String kind,
+    this.label = const Value.absent(),
+    this.draft = const Value.absent(),
+    required String hlc,
+    this.deleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       atMin = Value(atMin),
+       kind = Value(kind),
+       hlc = Value(hlc);
+  static Insertable<PinRow> custom({
+    Expression<String>? id,
+    Expression<int>? atMin,
+    Expression<String>? kind,
+    Expression<String>? label,
+    Expression<bool>? draft,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (atMin != null) 'at_min': atMin,
+      if (kind != null) 'kind': kind,
+      if (label != null) 'label': label,
+      if (draft != null) 'draft': draft,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PinsCompanion copyWith({
+    Value<String>? id,
+    Value<int>? atMin,
+    Value<String>? kind,
+    Value<String?>? label,
+    Value<bool>? draft,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<int>? rowid,
+  }) {
+    return PinsCompanion(
+      id: id ?? this.id,
+      atMin: atMin ?? this.atMin,
+      kind: kind ?? this.kind,
+      label: label ?? this.label,
+      draft: draft ?? this.draft,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (atMin.present) {
+      map['at_min'] = Variable<int>(atMin.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (draft.present) {
+      map['draft'] = Variable<bool>(draft.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PinsCompanion(')
+          ..write('id: $id, ')
+          ..write('atMin: $atMin, ')
+          ..write('kind: $kind, ')
+          ..write('label: $label, ')
+          ..write('draft: $draft, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RemoteLinksTable extends RemoteLinks
     with TableInfo<$RemoteLinksTable, RemoteLinkRow> {
   @override
@@ -4238,6 +4692,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TodosTable todos = $TodosTable(this);
   late final $TemplatesTable templates = $TemplatesTable(this);
   late final $SeriesTable series = $SeriesTable(this);
+  late final $PinsTable pins = $PinsTable(this);
   late final $RemoteLinksTable remoteLinks = $RemoteLinksTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $LocalKvTable localKv = $LocalKvTable(this);
@@ -4252,6 +4707,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     todos,
     templates,
     series,
+    pins,
     remoteLinks,
     settings,
     localKv,
@@ -5988,6 +6444,243 @@ typedef $$SeriesTableProcessedTableManager =
       SeriesRow,
       PrefetchHooks Function()
     >;
+typedef $$PinsTableCreateCompanionBuilder = PinsCompanion Function({
+  required String id,
+  required int atMin,
+  required String kind,
+  Value<String?> label,
+  Value<bool> draft,
+  required String hlc,
+  Value<bool> deleted,
+  Value<int> rowid,
+});
+typedef $$PinsTableUpdateCompanionBuilder = PinsCompanion Function({
+  Value<String> id,
+  Value<int> atMin,
+  Value<String> kind,
+  Value<String?> label,
+  Value<bool> draft,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<int> rowid,
+});
+
+class $$PinsTableFilterComposer extends Composer<_$AppDatabase, $PinsTable> {
+  $$PinsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get atMin => $composableBuilder(
+    column: $table.atMin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get draft => $composableBuilder(
+    column: $table.draft,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PinsTableOrderingComposer extends Composer<_$AppDatabase, $PinsTable> {
+  $$PinsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get atMin => $composableBuilder(
+    column: $table.atMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get draft => $composableBuilder(
+    column: $table.draft,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PinsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PinsTable> {
+  $$PinsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get atMin =>
+      $composableBuilder(column: $table.atMin, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<bool> get draft =>
+      $composableBuilder(column: $table.draft, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+}
+
+class $$PinsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PinsTable,
+          PinRow,
+          $$PinsTableFilterComposer,
+          $$PinsTableOrderingComposer,
+          $$PinsTableAnnotationComposer,
+          $$PinsTableCreateCompanionBuilder,
+          $$PinsTableUpdateCompanionBuilder,
+          (PinRow, BaseReferences<_$AppDatabase, $PinsTable, PinRow>),
+          PinRow,
+          PrefetchHooks Function()
+        > {
+  $$PinsTableTableManager(_$AppDatabase db, $PinsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PinsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PinsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PinsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<int> atMin = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<bool> draft = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PinsCompanion(
+                id: id,
+                atMin: atMin,
+                kind: kind,
+                label: label,
+                draft: draft,
+                hlc: hlc,
+                deleted: deleted,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required int atMin,
+                required String kind,
+                Value<String?> label = const Value.absent(),
+                Value<bool> draft = const Value.absent(),
+                required String hlc,
+                Value<bool> deleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PinsCompanion.insert(
+                id: id,
+                atMin: atMin,
+                kind: kind,
+                label: label,
+                draft: draft,
+                hlc: hlc,
+                deleted: deleted,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PinsTable, PinRow>(table),
+                  BaseReferences<_$AppDatabase, $PinsTable, PinRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PinsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PinsTable,
+      PinRow,
+      $$PinsTableFilterComposer,
+      $$PinsTableOrderingComposer,
+      $$PinsTableAnnotationComposer,
+      $$PinsTableCreateCompanionBuilder,
+      $$PinsTableUpdateCompanionBuilder,
+      (PinRow, BaseReferences<_$AppDatabase, $PinsTable, PinRow>),
+      PinRow,
+      PrefetchHooks Function()
+    >;
 typedef $$RemoteLinksTableCreateCompanionBuilder =
     RemoteLinksCompanion Function({
       required String blockId,
@@ -6497,6 +7190,7 @@ class $AppDatabaseManager {
       $$TemplatesTableTableManager(_db, _db.templates);
   $$SeriesTableTableManager get series =>
       $$SeriesTableTableManager(_db, _db.series);
+  $$PinsTableTableManager get pins => $$PinsTableTableManager(_db, _db.pins);
   $$RemoteLinksTableTableManager get remoteLinks =>
       $$RemoteLinksTableTableManager(_db, _db.remoteLinks);
   $$SettingsTableTableManager get settings =>

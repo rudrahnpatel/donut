@@ -251,4 +251,98 @@ void main() {
       expect(m.release(label)?.id, 'label:home to stn');
     });
   });
+
+  group('four ways: tasks up, end pin right, labels down, start pin left', () {
+    List<MarkingItem> pins(String side) => [
+      MarkingItem(id: '$side:reachBy', glyph: '🏁', label: 'Reach by'),
+      MarkingItem(id: '$side:meetingAt', glyph: '🤝', label: 'Meeting at'),
+      MarkingItem(id: '$side:custom', glyph: '✏️', label: 'Custom…'),
+    ];
+    // Left of centre, so the end-pin list fits beside its item.
+    const origin = Offset(120, 400);
+    MarkingMenuController four() => MarkingMenuController(
+      origin: origin,
+      rootItems: [
+        MarkingItem(id: 'group:tasks', glyph: '✅', children: _activities),
+        MarkingItem(
+          id: 'pinend:reachBy',
+          glyph: '📍',
+          asList: true,
+          children: () => pins('pinend'),
+        ),
+        MarkingItem(id: 'group:label', glyph: '✏️', children: _emojis),
+        MarkingItem(
+          id: 'pinstart:leaveBy',
+          glyph: '📍',
+          asList: true,
+          children: () => pins('pinstart'),
+        ),
+      ],
+      bounds: screen,
+      split: true,
+    );
+
+    test('each quarter picks its item', () {
+      for (final (dir, id) in [
+        (const Offset(10, -60), 'group:tasks'),
+        (const Offset(60, 20), 'pinend:reachBy'),
+        (const Offset(-15, 60), 'group:label'),
+        (const Offset(-60, -20), 'pinstart:leaveBy'),
+      ]) {
+        final m = four();
+        m.pointer(origin + dir, Duration.zero);
+        expect(m.highlightedItem?.id, id, reason: '$dir');
+      }
+    });
+
+    test('flicking right opens the pin list beside it; a straight flick '
+        'picks the first row', () {
+      final m = four();
+      m.pointer(origin + const Offset(50, 0), Duration.zero);
+      m.pointer(origin + const Offset(84, 0), const Duration(milliseconds: 16));
+      final list = m.levels.last;
+      expect(list.isList, isTrue);
+      final pin = m.levels.first.itemPos(1);
+      expect(list.itemPos(0).dy, closeTo(pin.dy, 0.01));
+      expect(list.itemPos(0).dx, greaterThan(pin.dx));
+      m.pointer(pin + const Offset(30, 2), const Duration(milliseconds: 32));
+      expect(m.release(pin)?.id, 'pinend:reachBy');
+      expect(m.highlightedItem?.label, 'Reach by');
+    });
+  });
+
+  test('a side list with no room beside its item hangs below it', () {
+    final m = MarkingMenuController(
+      origin: const Offset(300, 400),
+      rootItems: [
+        const MarkingItem(id: 'up', glyph: '✅'),
+        MarkingItem(
+          id: 'pinend:reachBy',
+          glyph: '📍',
+          asList: true,
+          children: () => const [
+            MarkingItem(id: 'pinend:reachBy', glyph: '🏁', label: 'Reach by'),
+            MarkingItem(
+              id: 'pinend:meetingAt',
+              glyph: '🤝',
+              label: 'Meeting at',
+            ),
+          ],
+        ),
+        const MarkingItem(id: 'down', glyph: '✏️'),
+        const MarkingItem(id: 'left', glyph: '📍'),
+      ],
+      bounds: screen,
+      split: true,
+    );
+    m.pointer(const Offset(350, 400), Duration.zero);
+    m.pointer(const Offset(384, 400), const Duration(milliseconds: 16));
+    final pin = m.levels.first.itemPos(1);
+    final list = m.levels.last;
+    // Nothing covers the 📍: the rows start below it.
+    expect(list.itemPos(0).dy - 18, greaterThan(pin.dy + 26));
+    for (var i = 0; i < 2; i++) {
+      expect(list.itemPos(i).dx + list.rowWidth / 2, lessThanOrEqualTo(400));
+    }
+  });
 }

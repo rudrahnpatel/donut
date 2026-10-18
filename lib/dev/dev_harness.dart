@@ -261,6 +261,19 @@ class DevHarness {
         down(hub);
         await hold();
         await moveTo(hub + const Offset(120, 40));
+      case 'pin':
+        down(at(target));
+        await hold();
+        await moveTo(last + const Offset(96, 4));
+      case 'pinned':
+        // Pin the end of the block with the list's first row (Reach by),
+        // then show the dial with the pin on it.
+        down(at(target));
+        await hold();
+        await moveTo(last + const Offset(96, 4));
+        await moveTo(last + const Offset(40, 0), steps: 4);
+        binding.handlePointerEvent(PointerUpEvent(pointer: id, position: last));
+        await Future<void>.delayed(const Duration(milliseconds: 600));
     }
   }
 

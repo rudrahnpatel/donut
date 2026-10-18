@@ -5,7 +5,7 @@
 Settings → Sync offers three modes:
 
 - **Off:** everything stays on the device.
-- **Devices:** entries, tasks, to-dos, templates, repeats and shared settings sync between
+- **Devices:** entries, pins, tasks, to-dos, templates, repeats and shared settings sync between
   devices through Drive's hidden app folder (`drive.appdata`).
 - **Calendar:** device sync, plus:
   - Saved entries are mirrored two-way to a dedicated "Donut" Google calendar.

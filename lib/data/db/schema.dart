@@ -126,6 +126,29 @@ class Series extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// A point in time to plan around: "Reach by 4:55", "Meeting at 5:00".
+/// Pins stand on their own, so moving an entry doesn't move a deadline.
+/// Pins dropped in plan mode are [draft] until ✓ and never sync before.
+@DataClassName('PinRow')
+class Pins extends Table {
+  TextColumn get id => text()();
+
+  /// Floating local minute, like blocks.
+  IntColumn get atMin => integer()();
+
+  /// `reachBy`, `meetingAt`, `leaveBy` or `custom` (see `PinKind`).
+  TextColumn get kind => text()();
+
+  /// The text of a custom pin.
+  TextColumn get label => text().nullable()();
+  BoolColumn get draft => boolean().withDefault(const Constant(false))();
+  TextColumn get hlc => text()();
+  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Where a block lives in a remote system (e.g. its Google event id + etag).
 @DataClassName('RemoteLinkRow')
 class RemoteLinks extends Table {

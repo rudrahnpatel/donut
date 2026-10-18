@@ -67,4 +67,30 @@ void main() {
     final b = planReminders(blocks, const {}, nowMin: at(14, 0), leadMin: 5);
     expect(a.first.id, b.first.id);
   });
+
+  test('pins remind 10 min early, whatever the entries\' lead', () {
+    PinRow pin(String id, int atMin, {bool draft = false}) => PinRow(
+      id: id,
+      atMin: atMin,
+      kind: 'reachBy',
+      draft: draft,
+      hlc: 'x',
+      deleted: false,
+    );
+    final r = planReminders(
+      const [],
+      const {},
+      pins: [
+        pin('p', at(16, 55)),
+        pin('sketch', at(17, 0), draft: true),
+        pin('soon', at(15, 5)),
+      ],
+      nowMin: at(15, 0),
+      leadMin: 0,
+    );
+    expect(r, hasLength(1));
+    expect(r.single.atMin, at(16, 45));
+    expect(r.single.title, '🏁 Reach by 4:55 PM');
+    expect(r.single.body, 'In 10 min');
+  });
 }

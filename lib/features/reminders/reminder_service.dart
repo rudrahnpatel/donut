@@ -10,6 +10,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../core/time/day_minutes.dart';
 import '../../data/db/app_database.dart';
 import '../../data/repos/block_repo.dart';
+import '../../data/repos/pin_repo.dart';
 
 /// One notification to show at absolute floating minute [atMin].
 class Reminder {
@@ -37,11 +38,16 @@ class Reminder {
   int get hashCode => Object.hash(id, atMin, title, body);
 }
 
+/// How early a pin ("Reach by 4:55") notifies, whatever the entries' lead.
+const pinLeadMin = 10;
+
 /// Reminders for saved entries starting after [nowMin] and within
-/// [horizonMin] minutes, [leadMin] minutes early. Drafts never remind.
+/// [horizonMin] minutes, [leadMin] minutes early, and for [pins],
+/// [pinLeadMin] minutes early. Drafts never remind.
 List<Reminder> planReminders(
   Iterable<PlanBlock> saved,
   Map<String, ActivityRow> activities, {
+  Iterable<PinRow> pins = const [],
   required int nowMin,
   required int leadMin,
   bool use24h = false,
@@ -64,6 +70,19 @@ List<Reminder> planReminders(
         atMin: at,
         title: name == null ? '${emoji}Up next' : '$emoji$name',
         body: leadMin == 0 ? times : '$times · in $leadMin min',
+      ),
+    );
+  }
+  for (final p in pins) {
+    if (p.draft || p.deleted) continue;
+    final at = p.atMin - pinLeadMin;
+    if (at <= nowMin || at > nowMin + horizonMin) continue;
+    out.add(
+      Reminder(
+        id: _stableId('pin:${p.id}'),
+        atMin: at,
+        title: '${p.pinKind.glyph} ${p.describe(use24h: use24h)}',
+        body: 'In $pinLeadMin min',
       ),
     );
   }

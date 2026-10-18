@@ -3,7 +3,7 @@
 ## What
 
 A debug-only harness (`lib/dev/dev_harness.dart`) runs the real app against an in-memory demo
-database, optionally plays a synthetic gesture (`DONUT_SCENE=menu|tasks|label|drag|select|picker`)
+database, optionally plays a synthetic gesture (`DONUT_SCENE=menu|tasks|label|pin|pinned|drag|select|picker`)
 and saves its own screenshot, then exits. With `xvfb-run` it renders fully off-screen, so it
 never touches the desktop session or real data.
 
@@ -12,6 +12,8 @@ xvfb-run -a -s "-screen 0 1100x1000x24" env -u WAYLAND_DISPLAY GDK_BACKEND=x11 \
   DONUT_DEMO=1 DONUT_THEME=dark DONUT_LEVEL=hour DONUT_HOUR=16 DONUT_SCENE=label \
   DONUT_SCREENSHOT=/tmp/shot.png ./build/linux/x64/debug/bundle/donut
 ```
+
+`DONUT_WINDOW=412x900` opens a phone-shaped window (read by `linux/runner/my_application.cc`).
 
 ## How
 

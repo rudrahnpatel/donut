@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
 import '../../core/time/day_minutes.dart';
+import '../../data/db/app_database.dart';
 import '../../data/repos/block_repo.dart';
 import 'reminder_service.dart';
 
@@ -21,6 +22,13 @@ final _upcomingSavedProvider = StreamProvider<List<PlanBlock>>((ref) {
       .watchSavedInRange(today.startMin, today.endMin + minutesPerDay);
 });
 
+final _upcomingPinsProvider = StreamProvider<List<PinRow>>((ref) {
+  final today = ref.watch(todayProvider);
+  return ref
+      .watch(pinRepoProvider)
+      .watchRange(today.startMin, today.endMin + minutesPerDay);
+});
+
 /// The reminders that should exist right now. Recomputed when saved
 /// entries, tasks or settings change; not every minute.
 final remindersPlanProvider = Provider<List<Reminder>>((ref) {
@@ -30,6 +38,7 @@ final remindersPlanProvider = Provider<List<Reminder>>((ref) {
   return planReminders(
     blocks,
     ref.watch(activityMapProvider),
+    pins: ref.watch(_upcomingPinsProvider).value ?? const [],
     nowMin: nowAbsMinute(),
     leadMin: settings.reminderLeadMin,
     use24h: settings.use24h,

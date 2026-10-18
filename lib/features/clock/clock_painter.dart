@@ -27,6 +27,17 @@ class PaintBlock {
   final BlockStatus status;
 }
 
+/// A pin ("Reach by 4:55") ready to paint, at a day-relative minute.
+class PaintPin {
+  const PaintPin({required this.u, required this.glyph, this.draft = false});
+
+  final int u;
+  final String glyph;
+
+  /// Dropped in plan mode, not yet kept with ✓.
+  final bool draft;
+}
+
 class ClockPainter extends CustomPainter {
   ClockPainter({
     required this.spec,
@@ -38,6 +49,7 @@ class ClockPainter extends CustomPainter {
     this.nowU,
     this.dimAll = false,
     this.ghosts = const [],
+    this.pins = const [],
     this.lapOffset = 0,
   });
 
@@ -59,6 +71,8 @@ class ClockPainter extends CustomPainter {
 
   /// Busy times from other calendars, day-relative.
   final List<(int, int)> ghosts;
+
+  final List<PaintPin> pins;
 
   /// While the hour changes, entries glide between rings: each is drawn
   /// [lapOffset] laps further out than its final ring (+1 → 0 when moving
@@ -102,6 +116,7 @@ class ClockPainter extends CustomPainter {
       _block(canvas, g, b, mine, selected: b.id == selectedId);
       _emoji(canvas, g, b, mine);
     }
+    _pins(canvas, g);
     if (!_animating) _pastScrim(canvas, g);
     if (spec.isHour) _captions(canvas, g);
     if (preview != null) {
@@ -486,6 +501,62 @@ class ClockPainter extends CustomPainter {
     tp.paint(canvas, p - Offset(tp.width / 2, tp.height / 2));
   }
 
+  /// Each pin is a needle across its ring with a round head just past the
+  /// ring's outer edge holding its glyph. Like entries, only pins on the
+  /// two rings show (plus, mid-glide, the hour leaving them).
+  void _pins(Canvas canvas, ClockGeometry g) {
+    final head = (g.radius * 0.05).clamp(9.0, 15.0);
+    for (final p in pins) {
+      // A pin exactly where the outer ring ends (an entry ending on the
+      // hour) sits at its 12 o'clock instead of dropping off the dial.
+      final u = p.u == spec.end ? p.u - 0.001 : p.u.toDouble();
+      final m = u.floor();
+      if (!_inWindow(m, m + 1)) continue;
+      final lane = spec.laneOf(u);
+      if (lane.isOverflow && !_animating) continue;
+      final (r0, r1) = _radii(g, lane);
+      final a = spec.angleOf(u);
+      final alpha =
+          (p.draft ? 0.6 : 1.0) *
+          _laneFade(lane) *
+          (_inFinalWindow(m, m + 1) ? 1.0 : lapOffset.abs());
+      final ink = scheme.onSurface.withValues(alpha: alpha);
+      canvas.drawLine(
+        g.pointAt(a, r0 - 2),
+        g.pointAt(a, r1 + 2),
+        Paint()
+          ..color = ink
+          ..strokeWidth = 2.5
+          ..strokeCap = StrokeCap.round,
+      );
+      final c = g.pointAt(a, r1 + head * 0.55);
+      canvas.drawCircle(
+        c,
+        head,
+        Paint()..color = scheme.surface.withValues(alpha: alpha),
+      );
+      canvas.drawCircle(
+        c,
+        head,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = ink,
+      );
+      final tp = TextPainter(
+        text: TextSpan(
+          text: p.glyph,
+          style: emojiStyle.copyWith(
+            fontSize: head * 1.05,
+            color: Colors.black.withValues(alpha: alpha),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+    }
+  }
+
   void _handles(Canvas canvas, ClockGeometry g, PaintBlock b) {
     final fill = Paint()..color = scheme.surface;
     final ring = Paint()
@@ -590,6 +661,7 @@ class ClockPainter extends CustomPainter {
       old.dimAll != dimAll ||
       old.scheme != scheme ||
       old.ghosts != ghosts ||
+      old.pins != pins ||
       old.captions != captions ||
       old.lapOffset != lapOffset;
 }

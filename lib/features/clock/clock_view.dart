@@ -57,6 +57,7 @@ class ClockView extends StatefulWidget {
     this.onZoom,
     this.selectedId,
     this.ghosts = const [],
+    this.pins = const [],
     this.menuItemColor,
   });
 
@@ -73,6 +74,9 @@ class ClockView extends StatefulWidget {
   final int snapStep;
   final bool use24h;
   final List<(int, int)> ghosts;
+
+  /// Pins ("Reach by 4:55"), day-relative.
+  final List<PaintPin> pins;
 
   /// Shown in the hub when not dragging.
   final Widget Function(DialSpec shown) center;
@@ -521,6 +525,7 @@ class _ClockViewState extends State<ClockView>
                               nowU: nowU,
                               dimAll: widget.isPast,
                               ghosts: widget.ghosts,
+                              pins: widget.pins,
                               lapOffset: _lapOffset,
                             ),
                           ),

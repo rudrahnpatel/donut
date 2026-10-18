@@ -67,7 +67,7 @@ flutter build linux --release --dart-define-from-file=google.json
 
 Then **Settings → Sync → Sign in with Google** and pick a mode:
 
-- **Devices:** entries, tasks, to-dos, templates, repeats and settings sync through a hidden
+- **Devices:** entries, pins, tasks, to-dos, templates, repeats and settings sync through a hidden
   Drive folder only Donut can see. Each device writes its own file; the newest change to
   each item wins.
 - **Calendar:** the above, plus saved entries mirrored to a "Donut" calendar (edit or delete

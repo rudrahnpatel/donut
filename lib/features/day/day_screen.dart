@@ -9,6 +9,7 @@ import '../../app/theme/theme.dart';
 import '../../core/time/day_minutes.dart';
 import '../../data/db/app_database.dart';
 import '../../data/repos/block_repo.dart';
+import '../../data/repos/pin_repo.dart';
 import '../../data/repos/settings_repo.dart';
 import '../clock/clock_painter.dart';
 import '../clock/clock_view.dart';
@@ -60,21 +61,26 @@ class _DayScreenState extends ConsumerState<DayScreen> {
 
   Future<void> _savePlan() async {
     final ids = await ref.read(blockRepoProvider).saveAll();
+    final pins = await ref.read(pinRepoProvider).commitDrafts();
     ref.read(planModeProvider.notifier).set(false);
     ref.invalidate(quickRankingProvider);
     HapticFeedback.mediumImpact();
-    _snack(ids.isEmpty ? 'Plan mode off' : 'Plan saved ✨');
+    _snack(ids.isEmpty && pins == 0 ? 'Plan mode off' : 'Plan saved ✨');
   }
 
   Future<void> _discardPlan() async {
     final rows = await ref.read(blockRepoProvider).discardAll();
+    final pins = await ref.read(pinRepoProvider).discardDrafts();
     ref.read(planModeProvider.notifier).set(false);
-    if (rows.isEmpty) return;
+    if (rows.isEmpty && pins.isEmpty) return;
     _snack(
       'Plan discarded',
       action: SnackBarAction(
         label: 'Undo',
-        onPressed: () => ref.read(blockRepoProvider).restore(rows),
+        onPressed: () {
+          ref.read(blockRepoProvider).restore(rows);
+          ref.read(pinRepoProvider).restore(pins);
+        },
       ),
     );
   }
@@ -117,7 +123,7 @@ class _DayScreenState extends ConsumerState<DayScreen> {
     final hourLevel = mode.level == DialLevel.hour;
     final showNow = focused != today || (hourLevel && !mode.isLive);
     final planning = ref.watch(planningProvider);
-    final sketches = ref.watch(draftCountProvider).value ?? 0;
+    final sketches = ref.watch(draftCountProvider);
 
     return Scaffold(
       body: Stack(
@@ -379,6 +385,8 @@ class _DayPageState extends ConsumerState<DayPage> {
         if (todo == null) return;
         await _setActivity(blockId, todo.activityId);
         await lib.updateTodo(todo.id, blockId: Value(blockId));
+      case 'pinstart' || 'pinend':
+        await _pin(blockId, atEnd: kind == 'pinend', what: value);
       case 'group' || 'more':
         if (value == 'tasks') {
           final a = await pickActivity(context);
@@ -387,6 +395,47 @@ class _DayPageState extends ConsumerState<DayPage> {
           await _askLabel(blockId);
         }
     }
+  }
+
+  /// Drops a pin at an entry's start or end. [what] is a [PinKind] name,
+  /// `custom` (ask for text) or `text:<recent custom text>`.
+  Future<void> _pin(
+    String blockId, {
+    required bool atEnd,
+    required String what,
+  }) async {
+    final b = ref
+        .read(dayPlanProvider(day))
+        .value
+        ?.blocks
+        .where((b) => b.id == blockId)
+        .firstOrNull;
+    if (b == null) return;
+    var kind = PinKind.custom;
+    String? label;
+    if (what == 'custom') {
+      final text = await promptText(
+        context,
+        title: atEnd ? 'Pin the end' : 'Pin the start',
+        initial: '',
+        hint: 'e.g. train leaves',
+      );
+      label = text?.trim();
+      if (label == null || label.isEmpty) return;
+    } else if (what.startsWith('text:')) {
+      label = what.substring(5);
+    } else {
+      kind = PinKind.parse(what);
+    }
+    await ref
+        .read(pinRepoProvider)
+        .create(
+          atEnd ? b.endMin : b.startMin,
+          kind,
+          label: label,
+          draft: _sketching(null),
+        );
+    HapticFeedback.lightImpact();
   }
 
   Future<void> _onAgendaAction(PlanBlock b, AgendaAction a) async {
@@ -412,6 +461,33 @@ class _DayPageState extends ConsumerState<DayPage> {
         if (mounted) await showRepeatSheet(context, ref, b);
       case AgendaAction.delete:
         await _delete(b.id);
+    }
+  }
+
+  Future<void> _onPinAction(PinRow p, PinAction a) async {
+    final repo = ref.read(pinRepoProvider);
+    switch (a) {
+      case PinAction.editTime:
+        final minute = minuteOfDay(p.atMin);
+        final t = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay(hour: minute ~/ 60, minute: minute % 60),
+        );
+        if (t == null) return;
+        await repo.move(
+          p.id,
+          Day.containing(p.atMin).startMin + t.hour * 60 + t.minute,
+        );
+      case PinAction.delete:
+        final row = await repo.delete(p.id);
+        if (row == null) return;
+        _snack(
+          'Pin removed',
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => repo.restore([row]),
+          ),
+        );
     }
   }
 
@@ -473,6 +549,7 @@ class _DayPageState extends ConsumerState<DayPage> {
         ref.read(activitiesProvider).value ?? const <ActivityRow>[];
     final todos = ref.read(allTodosProvider).value ?? const <TodoRow>[];
     final labels = ref.read(recentLabelsProvider).value ?? const <String>[];
+    final pinTexts = ref.read(recentPinTextsProvider).value ?? const <String>[];
 
     final rank = {
       for (final (i, id) in (ranking?.activityIds ?? const <String>[]).indexed)
@@ -520,6 +597,29 @@ class _DayPageState extends ConsumerState<DayPage> {
         MarkingItem(id: 'label:$l', glyph: '🏷️', label: l, isText: true),
       const MarkingItem(id: 'more:label', glyph: '✏️', label: 'New label…'),
     ];
+    // A pin at the entry's start (left) or end (right). The likeliest kind
+    // comes first, so a straight flick picks it: leave by the start, reach
+    // by the end.
+    List<MarkingItem> pinItems(String side, List<PinKind> kinds) => [
+      for (final k in kinds)
+        MarkingItem(id: '$side:${k.name}', glyph: k.glyph, label: k.verb),
+      for (final t in pinTexts)
+        MarkingItem(id: '$side:text:$t', glyph: '📌', label: t),
+      MarkingItem(id: '$side:custom', glyph: '✏️', label: 'Custom…'),
+    ];
+    final startPins = pinItems('pinstart', const [
+      PinKind.leaveBy,
+      PinKind.meetingAt,
+      PinKind.reachBy,
+    ]);
+    final endPins = pinItems('pinend', const [
+      PinKind.reachBy,
+      PinKind.meetingAt,
+      PinKind.leaveBy,
+    ]);
+
+    // Clockwise from the top: tasks up, end pin right, labels down, start
+    // pin left.
     return [
       MarkingItem(
         id: 'group:tasks',
@@ -528,10 +628,24 @@ class _DayPageState extends ConsumerState<DayPage> {
         children: () => taskItems,
       ),
       MarkingItem(
+        id: 'pinend:${PinKind.reachBy.name}',
+        glyph: '📍',
+        label: 'Pin the end',
+        asList: true,
+        children: () => endPins,
+      ),
+      MarkingItem(
         id: 'group:label',
         glyph: '✏️',
         label: 'Label',
         children: () => labelItems,
+      ),
+      MarkingItem(
+        id: 'pinstart:${PinKind.leaveBy.name}',
+        glyph: '📍',
+        label: 'Pin the start',
+        asList: true,
+        children: () => startPins,
       ),
     ];
   }
@@ -588,6 +702,19 @@ class _DayPageState extends ConsumerState<DayPage> {
           status: b.status,
         ),
     ];
+    final pins = ref.watch(dayPinsProvider(day)).value ?? const <PinRow>[];
+    final paintPins = [
+      for (final p in pins)
+        PaintPin(
+          u: p.atMin - day.startMin,
+          glyph: p.pinKind.glyph,
+          draft: p.draft,
+        ),
+    ];
+    // The live hub counts down to the next pin in the coming 3 hours.
+    final nextPin = pins
+        .where((p) => p.atMin > nowAbs && p.atMin - nowAbs <= 180)
+        .firstOrNull;
     final onDay = plan.onDay.toList();
     final selectedBlock = plan.blocks
         .where((b) => b.id == _selected)
@@ -605,6 +732,7 @@ class _DayPageState extends ConsumerState<DayPage> {
           : ('AM', 'PM'),
       blocks: paintBlocks,
       ghosts: ghosts,
+      pins: paintPins,
       selectedId: _selected,
       isToday: day == today,
       isPast: day < today,
@@ -631,6 +759,10 @@ class _DayPageState extends ConsumerState<DayPage> {
                   shown.origin == (nowAbs - day.startMin) ~/ 60 * 60,
               nowMinute: nowAbs - day.startMin,
               use24h: settings.use24h,
+              next: nextPin == null
+                  ? null
+                  : '${nextPin.pinKind.glyph} ${nextPin.title} · '
+                        '${formatDuration(nextPin.atMin - nowAbs)}',
             )
           : _DayHub(day: day, plan: plan),
       onCreate: _create,
@@ -674,6 +806,11 @@ class _DayPageState extends ConsumerState<DayPage> {
     final agenda = AgendaList(
       day: day,
       blocks: onDay,
+      pins: [
+        for (final p in pins)
+          if (p.atMin >= day.startMin && p.atMin < day.endMin) p,
+      ],
+      onPinAction: _onPinAction,
       activities: activities,
       todosByBlock: todosByBlock,
       colorOf: colorOf,
@@ -684,7 +821,8 @@ class _DayPageState extends ConsumerState<DayPage> {
       hint: hourLevel
           ? 'Drag along a ring to add an entry.\n'
                 'Inner ring is this hour, outer ring the next.\n'
-                'Tap an entry to move or resize it; hold it for tasks and labels.\n'
+                'Tap an entry to move or resize it; hold it for tasks and '
+                'labels, or flick left/right to pin its start/end.\n'
                 'Hold the centre to jump to another hour.'
           : 'Drag along a ring to add an entry.\n'
                 'Inner ring is AM, outer ring is PM.\n'
@@ -770,10 +908,14 @@ class _HourHub extends StatelessWidget {
     required this.live,
     required this.nowMinute,
     required this.use24h,
+    this.next,
   });
 
   final DialSpec shown;
   final bool live;
+
+  /// Countdown to the next pin, shown under the live time.
+  final String? next;
 
   /// Day-relative minute of now; the live hub shows the current time.
   final int nowMinute;
@@ -807,6 +949,19 @@ class _HourHub extends StatelessWidget {
             height: 1.05,
           ),
         ),
+        if (live && next != null)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 150),
+            child: Text(
+              next!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.labelMedium?.copyWith(
+                color: scheme.tertiary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
       ],
     );
   }

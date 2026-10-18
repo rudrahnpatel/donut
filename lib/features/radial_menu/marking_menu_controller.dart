@@ -14,6 +14,7 @@ class MarkingItem {
     this.label,
     this.children,
     this.isText = false,
+    this.asList = false,
   });
 
   final String id;
@@ -24,6 +25,10 @@ class MarkingItem {
   /// Drawn as a text pill showing [label] (to-dos, labels) instead of a
   /// round glyph, so it needs more room in the fan.
   final bool isText;
+
+  /// Open [children] as a list of rows (glyph and label) even when none is
+  /// plain text; text children always open as a list.
+  final bool asList;
 
   bool get hasChildren => children != null;
 
@@ -206,7 +211,7 @@ class MarkingMenuController {
     final fromParent = (p - parent.center).distance;
     final collapse = math.min(parent.radius - 12, fromParent - 16);
     levels.add(
-      children.any((c) => c.isText)
+      item.asList || children.any((c) => c.isText)
           ? _listLayout(at, children, forward, collapseDist: collapse)
           : _layout(at, children, forward, subRadius, collapseDist: collapse),
     );
@@ -231,13 +236,20 @@ class MarkingMenuController {
         .toDouble();
     final dir = Offset(math.cos(forward), math.sin(forward));
     const gap = itemRadius + 8 + rowPitch / 2;
+    // Beside the item when it fits there; otherwise it would slide back
+    // over the item, so it hangs below it instead.
+    final beside = at.dx + dir.dx.sign * (itemRadius + 10 + width / 2);
+    final fitsBeside =
+        beside - width / 2 >= safe.left && beside + width / 2 <= safe.right;
     final Offset first;
     var step = rowPitch;
     if (dir.dy.abs() >= dir.dx.abs()) {
       first = at + Offset(0, dir.dy.sign * gap);
       if (dir.dy < 0) step = -rowPitch;
+    } else if (fitsBeside) {
+      first = Offset(beside, at.dy);
     } else {
-      first = at + Offset(dir.dx.sign * (itemRadius + 10 + width / 2), 0);
+      first = at + const Offset(0, gap);
     }
     var rows = [
       for (var i = 0; i < items.length; i++) first + Offset(0, step * i),

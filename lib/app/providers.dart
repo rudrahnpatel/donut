@@ -5,6 +5,7 @@ import '../core/time/hlc.dart';
 import '../data/db/app_database.dart';
 import '../data/repos/block_repo.dart';
 import '../data/repos/library_repo.dart';
+import '../data/repos/pin_repo.dart';
 import '../data/repos/plan_tools_repo.dart';
 import '../data/repos/settings_repo.dart';
 
@@ -59,6 +60,22 @@ final settingsProvider = Provider<AppSettings>(
 
 final dayPlanProvider = StreamProvider.family<DayPlan, Day>(
   (ref, day) => ref.watch(blockRepoProvider).watchDay(day),
+);
+
+final pinRepoProvider = Provider(
+  (ref) => PinRepo(ref.watch(databaseProvider), ref.watch(hlcClockProvider)),
+);
+
+/// Pins on [day] and the days either side: the dial can show the edges of
+/// both.
+final dayPinsProvider = StreamProvider.family<List<PinRow>, Day>(
+  (ref, day) => ref
+      .watch(pinRepoProvider)
+      .watchRange(day.startMin - minutesPerDay, day.endMin + minutesPerDay),
+);
+
+final recentPinTextsProvider = StreamProvider<List<String>>(
+  (ref) => ref.watch(pinRepoProvider).watchRecentCustom(),
 );
 
 final activitiesProvider = StreamProvider<List<ActivityRow>>(
