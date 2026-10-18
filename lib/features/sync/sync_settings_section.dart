@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
@@ -59,6 +61,11 @@ class SyncSettingsSection extends ConsumerWidget {
                     onPressed: sync.signOut,
                     child: const Text('Sign out'),
                   )
+                else if (status.consenting)
+                  TextButton(
+                    onPressed: sync.cancelSignIn,
+                    child: const Text('Cancel'),
+                  )
                 else
                   FilledButton.icon(
                     onPressed: status.busy ? null : sync.signIn,
@@ -67,6 +74,21 @@ class SyncSettingsSection extends ConsumerWidget {
                   ),
               ],
             ),
+            if (status.consenting) ...[
+              const SizedBox(height: 8),
+              Text(
+                Platform.isAndroid
+                    ? 'Signing in with Google…'
+                    : 'Finish signing in with Google in your browser…',
+                style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ] else if (!status.signedIn && status.error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                status.error!,
+                style: t.bodySmall?.copyWith(color: scheme.error),
+              ),
+            ],
             const SizedBox(height: 16),
             SegmentedButton<SyncMode>(
               segments: const [

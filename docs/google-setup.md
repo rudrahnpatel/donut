@@ -19,10 +19,12 @@ party. This takes about 15 minutes, once.
    - `https://www.googleapis.com/auth/calendar.calendarlist.readonly`: list your calendars
    - `https://www.googleapis.com/auth/calendar.events.freebusy`: busy times only (ghost arcs)
    - `email`: show which account is signed in (desktop)
-4. **Audience → Publish app** ("In production"). You do **not** need verification for
-   personal use. While an app is in *Testing*, Google expires its refresh tokens after
-   7 days, which would sign the desktop app out every week. You'll see an "unverified app"
-   warning when signing in; choose *Advanced → Go to Donut*.
+4. **Audience → Publish app → Confirm**, so the status reads **In production**. Don't skip
+   this: a new app starts in *Testing*, where only listed test users can sign in (everyone
+   else gets "Access blocked", see Troubleshooting), and Google expires sign-ins after
+   7 days. You do **not** need verification for personal use. Google may say the app
+   "needs verification"; ignore that. When signing in you'll see "Google hasn't verified
+   this app"; choose *Advanced → Go to Donut (unsafe)*.
 
 ## 3. OAuth clients
 
@@ -79,3 +81,26 @@ Plan-mode sketches never sync until you tick ✓.
 Sign-in opens your browser and listens on a localhost port for the redirect. The sign-in is
 stored in the desktop keyring (gnome-keyring / KWallet via libsecret). Without a keyring
 running, it falls back to a file readable only by you in the app's data folder.
+
+## Troubleshooting
+
+**"Access blocked: Donut has not completed the Google verification process" (Error 403:
+access_denied).** The app is still in *Testing* and the account you signed in with isn't a
+test user. Either:
+
+- **Publish it (recommended):** Google Auth Platform → **Audience** → *Publish app* →
+  *Confirm*. Any of your accounts can then sign in, past the "unverified app" warning, and
+  stays signed in.
+- **Or add yourself as a test user:** **Audience → Test users → Add users**, and enter the exact
+  account shown on the error page. This works at once, but Google signs you out every 7 days.
+
+On desktop, Google doesn't send this error back to Donut, so the app keeps waiting: tap
+**Cancel** next to the sign-in hint (or wait 5 minutes), then sign in again.
+
+**"Error 400: redirect_uri_mismatch" on desktop.** The id in `GOOGLE_DESKTOP_CLIENT_ID` is not a
+*Desktop app* client (a Web client was used by mistake). Desktop clients accept any
+localhost port; Web clients don't.
+
+**Android: sign-in sheet closes with "developer error" / code 10.** The Android client's
+SHA-1 or package name doesn't match the installed APK, or `GOOGLE_SERVER_CLIENT_ID` is not
+the *Web* client's id.

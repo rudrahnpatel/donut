@@ -23,6 +23,7 @@ class SyncStatus {
     this.lastSync,
     this.summary,
     this.error,
+    this.consenting = false,
   });
 
   /// The signed-in account (an email where available), or null.
@@ -32,6 +33,10 @@ class SyncStatus {
   final String? summary;
   final String? error;
 
+  /// Waiting for the user to finish Google's consent page (in the browser
+  /// on desktop); can be cancelled.
+  final bool consenting;
+
   bool get signedIn => account != null;
 
   SyncStatus copyWith({
@@ -40,12 +45,14 @@ class SyncStatus {
     DateTime? lastSync,
     String? summary,
     Object? error = _keep,
+    bool? consenting,
   }) => SyncStatus(
     account: account == _keep ? this.account : account as String?,
     busy: busy ?? this.busy,
     lastSync: lastSync ?? this.lastSync,
     summary: summary ?? this.summary,
     error: error == _keep ? this.error : error as String?,
+    consenting: consenting ?? this.consenting,
   );
 }
 
@@ -53,6 +60,10 @@ const Object _keep = Object();
 
 class _NeedsConsent implements Exception {
   const _NeedsConsent();
+}
+
+class _ConsentCancelled implements Exception {
+  const _ConsentCancelled();
 }
 
 /// Busy times from your other Google calendars (absolute floating
@@ -82,6 +93,7 @@ class SyncController extends Notifier<SyncStatus> {
   Timer? _periodic;
   StreamSubscription<void>? _changes;
   String? _timeZone;
+  Completer<void>? _cancelConsent;
 
   static const _ghostsKey = 'gcal_ghosts';
 
@@ -145,7 +157,7 @@ class SyncController extends Notifier<SyncStatus> {
     if (mode == SyncMode.off) mode = SyncMode.device;
     state = state.copyWith(busy: true, error: null);
     try {
-      final account = await _auth.signIn(_scopes(mode));
+      final account = await _consent(_scopes(mode));
       await _setModeSetting(mode);
       state = state.copyWith(account: account, busy: false);
     } catch (e) {
@@ -153,6 +165,29 @@ class SyncController extends Notifier<SyncStatus> {
       return;
     }
     await syncNow();
+  }
+
+  /// Stops waiting for an unfinished consent page.
+  void cancelSignIn() {
+    final c = _cancelConsent;
+    if (c != null && !c.isCompleted) c.complete();
+  }
+
+  /// Runs Google's consent flow, giving up on cancel or after 5 minutes.
+  /// On desktop, a page Google blocks (e.g. "Access blocked") never
+  /// redirects back to the app, so without this the wait never ends.
+  Future<String> _consent(List<String> scopes) async {
+    final cancel = _cancelConsent = Completer<void>();
+    state = state.copyWith(consenting: true);
+    try {
+      return await Future.any([
+        _auth.signIn(scopes),
+        cancel.future.then<String>((_) => throw const _ConsentCancelled()),
+      ]).timeout(const Duration(minutes: 5));
+    } finally {
+      _cancelConsent = null;
+      state = state.copyWith(consenting: false);
+    }
   }
 
   Future<void> signOut() async {
@@ -174,7 +209,7 @@ class SyncController extends Notifier<SyncStatus> {
     }
     if (await _auth.client(_scopes(mode)) == null) {
       try {
-        await _auth.signIn(_scopes(mode));
+        await _consent(_scopes(mode));
       } catch (e) {
         state = state.copyWith(error: _describe(e));
         return;
@@ -243,6 +278,10 @@ class SyncController extends Notifier<SyncStatus> {
 
   static String _describe(Object e) => switch (e) {
     _NeedsConsent() => 'Google needs you to allow access again: tap Sign in.',
+    _ConsentCancelled() => 'Sign-in cancelled.',
+    TimeoutException() =>
+      'Sign-in didn\'t finish. If Google said "Access blocked", see '
+          'docs/google-setup.md (Troubleshooting).',
     DetailedApiRequestError(:final status, :final message) =>
       'Google returned an error ($status): ${message ?? 'no details'}',
     SocketException() ||
