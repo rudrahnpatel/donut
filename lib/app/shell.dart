@@ -9,6 +9,7 @@ import '../features/day/day_screen.dart';
 import '../features/library/library_screen.dart';
 import '../features/reminders/reminder_providers.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/widget_bridge/widget_bridge.dart';
 import 'providers.dart';
 
 /// Which top-level destination is showing.
@@ -45,6 +46,7 @@ class _AppShellState extends ConsumerState<AppShell>
     WidgetsBinding.instance.addObserver(this);
     _onNewDay();
     startReminders(ref);
+    startWidgetBridge(ref);
   }
 
   @override
