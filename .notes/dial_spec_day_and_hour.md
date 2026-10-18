@@ -76,3 +76,52 @@ flowchart LR
   the inner ring (`Lane.before`), time *after* the outer lap on a thin band **outside** the
   outer ring (`Lane.after`). The user asked for the past spill (e.g. the 2:55–3:00 part of
   a 2:55–3:05 entry seen from 3 PM) to sit inside rather than on the outer band.
+
+## Hour glide and constant bands
+
+### What
+
+- When the hour dial moves forward by one hour (a slide during a drag, a flick on the hub,
+  the clock ticking over), entries **glide inward**: the next-hour ring's entries shrink onto
+  the inner ring, and the old hour's entries slide onto the thin inside band and fade.
+  Moving back an hour plays the same glide outward. Jumps of more than one hour just switch.
+- The two thin spill bands (inside and outside) are **always drawn** as faint tracks, not
+  only when something spills onto them. The user reported the inside band as "not
+  consistent" because it appeared and disappeared with the entries.
+
+### How
+
+- `ClockView` owns `_laps`, a 450 ms `AnimationController` (`easeOutCubic`).
+  `_animateLaps(from, to)` starts it only when both specs are hour dials and the origin moved
+  by exactly ±1 turn. It is called from `didUpdateWidget` (a new spec from the page) and
+  from the drag slide.
+- The painter takes `lapOffset`, which runs from ±1 to 0:
+  - `_radii(lane)` blends each lane's radii towards the neighbouring ring
+    (before ↔ inner ↔ outer ↔ after).
+  - `_laneFade(lane)` blends opacity the same way (bands 0.55, inner 1.0, the hour dial's
+    outer ring 0.5).
+  - `_inWindow` widens to the hour leaving the rings so its entries can glide away rather
+    than vanish. Entries outside the final window fade out with `|lapOffset|`.
+
+```mermaid
+sequenceDiagram
+  participant Page as DayPage
+  participant View as ClockView
+  participant P as ClockPainter
+  Page->>View: new spec (origin +60)
+  View->>View: _animateLaps: laps = +1, forward(from 0)
+  loop each frame (450 ms)
+    View->>P: lapOffset = 1 − easeOutCubic(t)
+    P->>P: _radii / _laneFade blend rings, _inWindow keeps the old hour
+  end
+  View->>P: lapOffset = 0 (settled)
+```
+
+### Why
+
+- Time flows from the outer ring to the inner ring and then to the inside band, so the
+  animation shows the same direction. The user asked for an "inward animation" after
+  the switch to fixed clock hours made rings jump without visual continuity.
+- Interpolating radii in the painter keeps the gesture machine and geometry untouched: hit
+  testing uses the final spec, and the animation is short enough that a touch during it
+  lands on the settled layout.

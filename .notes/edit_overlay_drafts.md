@@ -37,3 +37,29 @@ instantly and the sketch layer is opt-in.
   edits on both, and makes sync conflicts coarse. Per-block rows avoid both.
 - Templates and "copy yesterday" apply through the same overlay, so they arrive as unsaved
   changes the user can review.
+
+## Plan mode looks like a different place
+
+### What
+
+While planning, the whole app turns into one dark, night-violet palette, whatever the normal
+theme. The day page also shows a faint dot-grid "sketch paper" behind the dial, and a banner
+with ✕ / ✓. Saving or discarding fades the app back to its normal theme. The user asked
+for it to feel like "switching between normal and incognito, except you can save".
+
+### How
+
+- `lib/app/app.dart`: when `planningProvider` is true, both `theme` and `darkTheme` use
+  `ColorScheme.fromSeed(planSeed, dark)` and `themeMode` is forced to dark.
+  `themeAnimationDuration` is 450 ms, so `MaterialApp`'s `AnimatedTheme` cross-fades every
+  colour without extra code.
+- `day_screen.dart`: `_SketchPaper` paints the dot grid; `_PlanBanner` holds ✕ (discard with
+  Undo) and ✓ (save).
+
+### Why
+
+- A tinted banner alone was too easy to miss. Edits look the same in both modes, so you
+  couldn't tell whether a drag would save. Changing the whole palette makes the mode
+  impossible to miss, and it needs nothing beyond the theme switch.
+- It is always dark (like a browser's private window) so the change is obvious even when
+  the normal theme is already dark: the purple hue differs from the wallpaper colours.

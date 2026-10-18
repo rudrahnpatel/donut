@@ -55,3 +55,14 @@ flowchart LR
   So the entry's own colour wins over its activity's.
 - Overlaps split radially rather than stacking or blocking, so both entries stay visible
   and tappable. Splitting only the overlapping part keeps the rest of each entry at full width.
+
+## Recolouring older entries
+
+- Entries made before colours were stored had no `color` and fell back to an id hash,
+  so neighbours often clashed. At startup `main.dart` runs
+  `BlockRepo.assignMissingColors()`. In one transaction it gives each uncoloured saved
+  entry and sketch a palette colour via `pickEntryColor`, avoiding the colours of entries it
+  touches or overlaps. Once every entry has a colour, it does nothing.
+- `pickEntryColor` (`lib/core/entry_colors.dart`) is shared with `DayPage._colorFor`, so new
+  and recoloured entries follow the same rule. Recoloured saved entries get a fresh HLC, so
+  the new colour syncs.
