@@ -228,6 +228,20 @@ class _SpokesPainter extends CustomPainter {
         canvas.drawLine(level.anchor, level.center, spoke);
       }
       canvas.drawCircle(level.center, 6, Paint()..color = scheme.primary);
+      if (level.split && level.items.length == 2 && c.levels.length == 1) {
+        // The line between the two halves.
+        final half = Offset(level.radius * 0.8, 0);
+        canvas.drawLine(
+          level.center - half,
+          level.center - const Offset(14, 0),
+          spoke,
+        );
+        canvas.drawLine(
+          level.center + const Offset(14, 0),
+          level.center + half,
+          spoke,
+        );
+      }
       for (var i = 0; i < level.items.length; i++) {
         final p = level.itemPos(i);
         final highlighted = level.highlighted == i;

@@ -122,4 +122,57 @@ void main() {
       );
     }
   });
+
+  group('split root (tasks up, labels down)', () {
+    MarkingMenuController split() => MarkingMenuController(
+      origin: origin,
+      rootItems: [
+        MarkingItem(id: 'group:tasks', glyph: '✅', children: _activities),
+        MarkingItem(
+          id: 'group:label',
+          glyph: '✏️',
+          children: () => const [
+            MarkingItem(id: 'label:a', glyph: '🏷️', label: 'packing'),
+            MarkingItem(id: 'label:b', glyph: '🏷️', label: 'cooking'),
+          ],
+        ),
+      ],
+      bounds: screen,
+      split: true,
+    );
+
+    test('first item straight up, second straight down', () {
+      final l = split().levels.single;
+      expect(l.itemPos(0).dx, closeTo(origin.dx, 0.01));
+      expect(l.itemPos(0).dy, lessThan(origin.dy));
+      expect(l.itemPos(1).dx, closeTo(origin.dx, 0.01));
+      expect(l.itemPos(1).dy, greaterThan(origin.dy));
+    });
+
+    test('anywhere in the upper half picks tasks, lower half labels', () {
+      for (final (dir, id) in [
+        (const Offset(60, -8), 'group:tasks'),
+        (const Offset(-60, -8), 'group:tasks'),
+        (const Offset(0, -60), 'group:tasks'),
+        (const Offset(60, 8), 'group:label'),
+        (const Offset(-60, 8), 'group:label'),
+        (const Offset(0, 60), 'group:label'),
+      ]) {
+        final m = split();
+        m.pointer(origin + dir, Duration.zero);
+        expect(m.highlightedItem?.id, id, reason: '$dir');
+      }
+    });
+
+    test('the labels fan opens downward', () {
+      final m = split();
+      m.pointer(origin + const Offset(0, 50), Duration.zero);
+      m.pointer(origin + const Offset(0, 90), const Duration(milliseconds: 10));
+      expect(m.levels, hasLength(2));
+      final sub = m.levels.last;
+      for (var i = 0; i < sub.items.length; i++) {
+        expect(sub.itemPos(i).dy, greaterThan(origin.dy + 84));
+      }
+    });
+  });
 }

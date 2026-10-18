@@ -43,6 +43,7 @@ class MarkingLevel {
     required this.sector,
     required this.collapseDist,
     required this.anchor,
+    this.split = false,
   });
 
   /// Centre the items fan out from; may be shifted from [anchor] to stay on
@@ -60,6 +61,10 @@ class MarkingLevel {
 
   /// Moving closer than this to the *parent* centre collapses this level.
   final double collapseDist;
+
+  /// The items share the whole circle (with two: upper half, lower half)
+  /// instead of fanning out one way.
+  final bool split;
 
   int? highlighted;
   Duration highlightedSince = Duration.zero;
@@ -81,9 +86,19 @@ class MarkingMenuController {
     required List<MarkingItem> rootItems,
     required this.bounds,
     this.onHighlight,
+    bool split = false,
   }) {
-    final base = _pickBaseAngle(origin);
-    levels = [_layout(origin, rootItems, base, rootRadius, collapseDist: 0)];
+    levels = [
+      split
+          ? _splitLayout(origin, rootItems)
+          : _layout(
+              origin,
+              rootItems,
+              _pickBaseAngle(origin),
+              rootRadius,
+              collapseDist: 0,
+            ),
+    ];
   }
 
   static const double rootRadius = 84;
@@ -190,6 +205,42 @@ class MarkingMenuController {
     final angles = [
       for (var i = 0; i < n; i++) forward - spread / 2 + sector * (i + 0.5),
     ];
+    return _place(
+      anchor,
+      items,
+      angles,
+      sector,
+      radius,
+      collapseDist: collapseDist,
+    );
+  }
+
+  /// The root items share the whole circle, the first straight up: with two,
+  /// anywhere in the upper half picks the first and anywhere in the lower
+  /// half the second. Each sub-fan then opens in its item's direction.
+  MarkingLevel _splitLayout(Offset anchor, List<MarkingItem> items) {
+    final n = items.length;
+    final sector = 2 * math.pi / n;
+    return _place(
+      anchor,
+      items,
+      [for (var i = 0; i < n; i++) -math.pi / 2 + sector * i],
+      sector,
+      rootRadius,
+      collapseDist: 0,
+      split: true,
+    );
+  }
+
+  MarkingLevel _place(
+    Offset anchor,
+    List<MarkingItem> items,
+    List<double> angles,
+    double sector,
+    double radius, {
+    required double collapseDist,
+    bool split = false,
+  }) {
     // Slide the whole fan inward if any item would leave the screen.
     var center = anchor;
     final pad = itemRadius + 8;
@@ -211,6 +262,7 @@ class MarkingMenuController {
       angles: angles,
       sector: sector,
       collapseDist: collapseDist,
+      split: split,
     );
   }
 

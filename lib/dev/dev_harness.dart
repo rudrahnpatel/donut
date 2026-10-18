@@ -230,7 +230,7 @@ class DevHarness {
       case 'menu':
         down(at(target));
         await hold();
-        await moveTo(last + const Offset(-50, -70));
+        await moveTo(last + const Offset(-30, -20));
       case 'tasks':
         down(at(target));
         await hold();
@@ -239,7 +239,7 @@ class DevHarness {
       case 'label':
         down(at(target));
         await hold();
-        await moveTo(last + const Offset(55, -66));
+        await moveTo(last + const Offset(8, 92));
       case 'drag':
         // Draw a new block on the outer ring, following the arc so the
         // finger turns clockwise like a real drag.

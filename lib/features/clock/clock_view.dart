@@ -284,6 +284,8 @@ class _ClockViewState extends State<ClockView>
       rootItems: widget.menuItems(blockId),
       bounds: _screenBounds(),
       onHighlight: HapticFeedback.selectionClick,
+      // Tasks up, labels down.
+      split: true,
     );
     _menuClock
       ..reset()
