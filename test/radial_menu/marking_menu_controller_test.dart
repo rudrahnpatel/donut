@@ -175,4 +175,80 @@ void main() {
       }
     });
   });
+
+  group('text sub-menus open as a list', () {
+    const phone = Rect.fromLTWH(0, 0, 400, 800);
+    final labels = [
+      for (final l in [
+        'home to stn',
+        'Sleep',
+        'reels',
+        'getting fresh',
+        'diya and chai nashta',
+      ])
+        MarkingItem(id: 'label:$l', glyph: '🏷️', label: l, isText: true),
+      const MarkingItem(id: 'more:label', glyph: '✏️', label: 'New label…'),
+    ];
+    MarkingMenuController at(Offset origin) => MarkingMenuController(
+      origin: origin,
+      rootItems: [
+        MarkingItem(id: 'group:tasks', glyph: '✅', children: _activities),
+        MarkingItem(id: 'group:label', glyph: '✏️', children: () => labels),
+      ],
+      bounds: phone,
+      split: true,
+    );
+
+    MarkingLevel openLabels(MarkingMenuController m, Offset origin) {
+      m.pointer(origin + const Offset(0, 50), Duration.zero);
+      m.pointer(origin + const Offset(0, 90), const Duration(milliseconds: 16));
+      return m.levels.last;
+    }
+
+    test('rows stack below the Label item, first row nearest', () {
+      const origin = Offset(200, 300);
+      final m = at(origin);
+      final list = openLabels(m, origin);
+      expect(list.isList, isTrue);
+      final label = m.levels.first.itemPos(1);
+      for (var i = 0; i < labels.length; i++) {
+        expect(list.itemPos(i).dx, label.dx, reason: 'centred under it');
+        expect(list.itemPos(i).dy, greaterThan(label.dy));
+        if (i > 0) {
+          expect(list.itemPos(i).dy, greaterThan(list.itemPos(i - 1).dy));
+        }
+      }
+    });
+
+    test('pressed low and to the side, every row stays on screen', () {
+      const origin = Offset(380, 600);
+      final m = at(origin);
+      final list = openLabels(m, origin);
+      for (var i = 0; i < labels.length; i++) {
+        final r = list.itemPos(i);
+        expect(r.dx - list.rowWidth / 2, greaterThanOrEqualTo(phone.left));
+        expect(r.dx + list.rowWidth / 2, lessThanOrEqualTo(phone.right));
+        expect(r.dy + 18, lessThanOrEqualTo(phone.bottom));
+      }
+    });
+
+    test('the row level with the finger is picked', () {
+      const origin = Offset(200, 300);
+      final m = at(origin);
+      final list = openLabels(m, origin);
+      final third = list.itemPos(3);
+      // Anywhere across the row's height and off to the side still counts.
+      m.pointer(third + const Offset(60, 8), const Duration(milliseconds: 32));
+      expect(m.release(third)?.id, 'label:getting fresh');
+    });
+
+    test('a straight flick past the item picks the first row', () {
+      const origin = Offset(200, 300);
+      final m = at(origin);
+      openLabels(m, origin);
+      final label = m.levels.first.itemPos(1);
+      m.pointer(label + const Offset(0, 30), const Duration(milliseconds: 32));
+      expect(m.release(label)?.id, 'label:home to stn');
+    });
+  });
 }

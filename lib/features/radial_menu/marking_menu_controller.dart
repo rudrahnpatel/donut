@@ -31,6 +31,11 @@ class MarkingItem {
   double get extent => isText
       ? math.min(130, 28 + 7.5 * (label?.length ?? 0)).toDouble()
       : MarkingMenuController.itemRadius * 2;
+
+  /// Rough width as a row of a list level: the label, plus the glyph for
+  /// items that aren't plain text.
+  double get rowExtent =>
+      36 + (isText ? 0 : 28) + 7.8 * (label?.length ?? 2).toDouble();
 }
 
 /// One fan of items around [center].
@@ -44,6 +49,8 @@ class MarkingLevel {
     required this.collapseDist,
     required this.anchor,
     this.split = false,
+    this.rows,
+    this.rowWidth = 0,
   });
 
   /// Centre the items fan out from; may be shifted from [anchor] to stay on
@@ -66,10 +73,20 @@ class MarkingLevel {
   /// instead of fanning out one way.
   final bool split;
 
+  /// Row centres when this level is a list (text items: labels, to-dos,
+  /// pin types) instead of a fan; picked by the row level with the finger.
+  final List<Offset>? rows;
+
+  /// Width of every row of a list level.
+  final double rowWidth;
+
+  bool get isList => rows != null;
+
   int? highlighted;
   Duration highlightedSince = Duration.zero;
 
   Offset itemPos(int i) =>
+      rows?[i] ??
       center + Offset(math.cos(angles[i]), math.sin(angles[i])) * radius;
 }
 
@@ -106,6 +123,11 @@ class MarkingMenuController {
   static const double itemRadius = 26;
   static const double cancelDist = 24;
   static const double selectDist = 40;
+
+  /// List levels: row pitch, and how far the finger must leave the item
+  /// that opened the list before a row highlights.
+  static const double rowPitch = 44;
+  static const double listSelectDist = 20;
   static const Duration dwell = Duration(milliseconds: 200);
 
   final Rect bounds;
@@ -137,7 +159,11 @@ class MarkingMenuController {
     final rel = p - top.center;
     final dist = rel.distance;
     int? next;
-    if (dist >= selectDist) next = _nearest(top, math.atan2(rel.dy, rel.dx));
+    if (top.isList) {
+      if (dist >= listSelectDist) next = _nearestRow(top, p.dy);
+    } else if (dist >= selectDist) {
+      next = _nearest(top, math.atan2(rel.dy, rel.dx));
+    }
     if (next != top.highlighted) {
       top.highlighted = next;
       top.highlightedSince = t;
@@ -145,7 +171,7 @@ class MarkingMenuController {
     }
 
     final h = top.highlighted;
-    if (h == null) return;
+    if (h == null || top.isList) return;
     final item = top.items[h];
     if (!item.hasChildren) return;
     final reached = dist >= top.radius * 0.9;
@@ -180,7 +206,64 @@ class MarkingMenuController {
     final fromParent = (p - parent.center).distance;
     final collapse = math.min(parent.radius - 12, fromParent - 16);
     levels.add(
-      _layout(at, children, forward, subRadius, collapseDist: collapse),
+      children.any((c) => c.isText)
+          ? _listLayout(at, children, forward, collapseDist: collapse)
+          : _layout(at, children, forward, subRadius, collapseDist: collapse),
+    );
+  }
+
+  /// Text in a fan needs a big radius and still spills off screen, so text
+  /// items open as a list growing from the item that opened them, in its
+  /// direction (down, up, or beside it and downward). The first row is the
+  /// nearest, so a straight flick picks it. Clamped to the screen by the
+  /// rows' real width.
+  MarkingLevel _listLayout(
+    Offset at,
+    List<MarkingItem> items,
+    double forward, {
+    required double collapseDist,
+  }) {
+    final safe = bounds.deflate(8);
+    final width = items
+        .map((i) => i.rowExtent)
+        .reduce(math.max)
+        .clamp(120.0, math.min(240.0, safe.width))
+        .toDouble();
+    final dir = Offset(math.cos(forward), math.sin(forward));
+    const gap = itemRadius + 8 + rowPitch / 2;
+    final Offset first;
+    var step = rowPitch;
+    if (dir.dy.abs() >= dir.dx.abs()) {
+      first = at + Offset(0, dir.dy.sign * gap);
+      if (dir.dy < 0) step = -rowPitch;
+    } else {
+      first = at + Offset(dir.dx.sign * (itemRadius + 10 + width / 2), 0);
+    }
+    var rows = [
+      for (var i = 0; i < items.length; i++) first + Offset(0, step * i),
+    ];
+    final top = rows.map((r) => r.dy).reduce(math.min) - rowPitch / 2;
+    final bottom = rows.map((r) => r.dy).reduce(math.max) + rowPitch / 2;
+    var dx = 0.0, dy = 0.0;
+    if (first.dx - width / 2 < safe.left) {
+      dx = safe.left - (first.dx - width / 2);
+    }
+    if (first.dx + width / 2 > safe.right) {
+      dx = safe.right - (first.dx + width / 2);
+    }
+    if (bottom > safe.bottom) dy = safe.bottom - bottom;
+    if (top + dy < safe.top) dy = safe.top - top;
+    rows = [for (final r in rows) r.translate(dx, dy)];
+    return MarkingLevel(
+      center: at,
+      anchor: at,
+      radius: 0,
+      items: items,
+      angles: [for (final _ in items) forward],
+      sector: 0,
+      collapseDist: collapseDist,
+      rows: rows,
+      rowWidth: width,
     );
   }
 
@@ -290,6 +373,15 @@ class MarkingMenuController {
       if (room(a) >= 0) return a;
     }
     return candidates.reduce((a, b) => room(a) >= room(b) ? a : b);
+  }
+
+  int? _nearestRow(MarkingLevel level, double y) {
+    final rows = level.rows!;
+    var best = 0;
+    for (var i = 1; i < rows.length; i++) {
+      if ((rows[i].dy - y).abs() < (rows[best].dy - y).abs()) best = i;
+    }
+    return best;
   }
 
   int? _nearest(MarkingLevel level, double angle) {

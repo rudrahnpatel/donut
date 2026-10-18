@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -54,8 +56,8 @@ class _MarkingMenuLayerState extends State<MarkingMenuLayer> {
     final c = widget.controller;
     // Name what a release would pick: the highlighted item, or the parent
     // whose sub-fan the pointer is resting in.
-    var label = c.highlightedItem?.label;
-    if (label == null && c.levels.length > 1) {
+    var label = c.levels.last.isList ? null : c.highlightedItem?.label;
+    if (label == null && c.levels.length > 1 && c.highlightedItem == null) {
       final parent = c.levels[c.levels.length - 2];
       final ph = parent.highlighted;
       if (ph != null) label = parent.items[ph].label;
@@ -141,6 +143,7 @@ class _MarkingMenuLayerState extends State<MarkingMenuLayer> {
     final isTodo = item.isText;
     final accent = widget.itemColor?.call(item);
     const size = MarkingMenuController.itemRadius * 2;
+    if (level.isList) return _row(level, i, pos, highlighted, accent, scheme);
 
     final Widget face = isTodo
         ? ConstrainedBox(
@@ -209,6 +212,69 @@ class _MarkingMenuLayerState extends State<MarkingMenuLayer> {
       ),
     );
   }
+
+  /// One row of a list level: same width as its siblings, glyph (for
+  /// non-text items) and label left-aligned.
+  Widget _row(
+    MarkingLevel level,
+    int i,
+    Offset pos,
+    bool highlighted,
+    Color? accent,
+    ColorScheme scheme,
+  ) {
+    final item = level.items[i];
+    final fg = highlighted ? scheme.onPrimary : scheme.onSurface;
+    return Positioned(
+      left: pos.dx - level.rowWidth / 2,
+      top: pos.dy - 18,
+      width: level.rowWidth,
+      height: 36,
+      child: IgnorePointer(
+        child: TweenAnimationBuilder<double>(
+          key: ValueKey('${level.anchor}-${item.id}'),
+          tween: Tween(begin: 0, end: 1),
+          duration: Duration(milliseconds: 160 + 30 * i),
+          curve: Curves.easeOutCubic,
+          builder: (_, t, child) => Opacity(
+            opacity: t,
+            child: Transform.translate(
+              offset: Offset(0, (1 - t) * -8),
+              child: child,
+            ),
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: ShapeDecoration(
+              color: highlighted ? (accent ?? scheme.primary) : null,
+              shape: const StadiumBorder(),
+            ),
+            child: Row(
+              children: [
+                if (!item.isText) ...[
+                  Text(item.glyph, style: emojiStyle.copyWith(fontSize: 18)),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    item.label ?? item.glyph,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: fg,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SpokesPainter extends CustomPainter {
@@ -224,23 +290,38 @@ class _SpokesPainter extends CustomPainter {
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     for (final level in c.levels) {
+      if (level.isList) {
+        // A card behind the rows so they read over whatever is below.
+        final rows = level.rows!;
+        final ys = rows.map((r) => r.dy);
+        final card = RRect.fromRectAndRadius(
+          Rect.fromLTRB(
+            rows.first.dx - level.rowWidth / 2,
+            ys.reduce(math.min) - 18,
+            rows.first.dx + level.rowWidth / 2,
+            ys.reduce(math.max) + 18,
+          ).inflate(6),
+          const Radius.circular(24),
+        );
+        canvas.drawShadow(Path()..addRRect(card), Colors.black, 6, false);
+        canvas.drawRRect(card, Paint()..color = scheme.surfaceContainerHigh);
+        continue;
+      }
       if (level.center != level.anchor) {
         canvas.drawLine(level.anchor, level.center, spoke);
       }
       canvas.drawCircle(level.center, 6, Paint()..color = scheme.primary);
-      if (level.split && level.items.length == 2 && c.levels.length == 1) {
-        // The line between the two halves.
-        final half = Offset(level.radius * 0.8, 0);
-        canvas.drawLine(
-          level.center - half,
-          level.center - const Offset(14, 0),
-          spoke,
-        );
-        canvas.drawLine(
-          level.center + const Offset(14, 0),
-          level.center + half,
-          spoke,
-        );
+      if (level.split && c.levels.length == 1) {
+        // The lines between the items' slices of the circle.
+        for (final a in level.angles) {
+          final b = a + level.sector / 2;
+          final d = Offset(math.cos(b), math.sin(b));
+          canvas.drawLine(
+            level.center + d * 14,
+            level.center + d * level.radius * 0.8,
+            spoke,
+          );
+        }
       }
       for (var i = 0; i < level.items.length; i++) {
         final p = level.itemPos(i);
