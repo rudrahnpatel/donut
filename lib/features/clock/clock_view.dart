@@ -100,7 +100,8 @@ class ClockView extends StatefulWidget {
   State<ClockView> createState() => _ClockViewState();
 }
 
-class _ClockViewState extends State<ClockView> {
+class _ClockViewState extends State<ClockView>
+    with SingleTickerProviderStateMixin {
   late final ClockGestureMachine _machine = ClockGestureMachine(emit: _onEvent);
   final _overlay = OverlayPortalController();
 
@@ -112,6 +113,26 @@ class _ClockViewState extends State<ClockView> {
 
   /// Laps the hour dial has slid to follow a drag; reset when [spec] changes.
   int _slide = 0;
+
+  /// Glides entries between rings when the shown hour moves by one.
+  late final AnimationController _laps = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 450),
+  );
+  double _lapFrom = 0;
+
+  double get _lapOffset =>
+      _lapFrom * (1 - Curves.easeOutCubic.transform(_laps.value));
+
+  /// Starts the inward (or outward) glide if the hour dial moved by exactly
+  /// one hour; bigger jumps just switch.
+  void _animateLaps(DialSpec from, DialSpec to) {
+    if (!to.isHour || from.turn != to.turn) return;
+    final laps = (to.origin - from.origin) / to.turn;
+    if (laps.abs() != 1) return;
+    _lapFrom = laps;
+    _laps.forward(from: 0);
+  }
 
   MarkingMenuController? _menu;
   HourPickerController? _picker;
@@ -140,10 +161,11 @@ class _ClockViewState extends State<ClockView> {
   @override
   void didUpdateWidget(ClockView old) {
     super.didUpdateWidget(old);
-    // The live hour's origin creeps forward each minute; only a real
-    // change of hour (or zoom level) resets the slide.
+    final before = old.spec.slides ? old.spec.shifted(_slide) : old.spec;
+    // Only a real change of hour (or zoom level) resets the slide.
     final moved = (old.spec.origin - widget.spec.origin).abs() >= 60;
     if (old.spec.turn != widget.spec.turn || moved) _slide = 0;
+    _animateLaps(before, _spec);
   }
 
   @override
@@ -151,6 +173,7 @@ class _ClockViewState extends State<ClockView> {
     _holdTimer?.cancel();
     _nowTimer?.cancel();
     _menuTicker?.cancel();
+    _laps.dispose();
     super.dispose();
   }
 
@@ -222,7 +245,9 @@ class _ClockViewState extends State<ClockView> {
     }
     if (slide != _slide) {
       HapticFeedback.mediumImpact();
+      final before = _spec;
       _slide = slide;
+      _animateLaps(before, _spec);
     }
   }
 
@@ -480,19 +505,22 @@ class _ClockViewState extends State<ClockView> {
                             ),
                       },
                       child: RepaintBoundary(
-                        child: CustomPaint(
-                          size: size,
-                          painter: ClockPainter(
-                            spec: spec,
-                            captions: widget.captions(spec),
-                            blocks: widget.blocks,
-                            scheme: scheme,
-                            preview: previewBlock,
-                            selectedId: widget.selectedId,
-                            nowU: nowU,
-                            dimAll: widget.isPast,
-                            ghosts: widget.ghosts,
-                            showOverflow: preview != null,
+                        child: AnimatedBuilder(
+                          animation: _laps,
+                          builder: (context, _) => CustomPaint(
+                            size: size,
+                            painter: ClockPainter(
+                              spec: spec,
+                              captions: widget.captions(spec),
+                              blocks: widget.blocks,
+                              scheme: scheme,
+                              preview: previewBlock,
+                              selectedId: widget.selectedId,
+                              nowU: nowU,
+                              dimAll: widget.isPast,
+                              ghosts: widget.ghosts,
+                              lapOffset: _lapOffset,
+                            ),
                           ),
                         ),
                       ),

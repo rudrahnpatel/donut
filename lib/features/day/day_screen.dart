@@ -119,118 +119,137 @@ class _DayScreenState extends ConsumerState<DayScreen> {
     final sketches = ref.watch(draftCountProvider).value ?? 0;
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Swipe anywhere on the header to change day; tap the date for a
-            // calendar. A drag beats the buttons' taps once it moves.
-            GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onHorizontalDragStart: (_) => _swipeDx = 0,
-              onHorizontalDragUpdate: (d) => _swipeDx += d.delta.dx,
-              onHorizontalDragEnd: (d) {
-                // A flick or a deliberate drag both count.
-                final v = d.primaryVelocity ?? 0;
-                if (_swipeDx.abs() > 60 || v.abs() > 300) {
-                  _shiftDay((_swipeDx.abs() > 60 ? _swipeDx : v) < 0 ? 1 : -1);
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: date,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2100),
-                          );
-                          if (picked != null) {
-                            ref
-                                .read(focusedDayProvider.notifier)
-                                .set(Day.fromDateTime(picked));
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(rel, style: t.titleLarge),
-                              Text(
-                                DateFormat.yMMMMd().format(date),
-                                style: t.bodyMedium?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
+      body: Stack(
+        children: [
+          // Plan mode's sketch paper: a faint dot grid behind everything.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: planning ? 1 : 0,
+                duration: const Duration(milliseconds: 450),
+                child: CustomPaint(painter: _SketchPaper(scheme.onSurface)),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                // Swipe anywhere on the header to change day; tap the date for a
+                // calendar. A drag beats the buttons' taps once it moves.
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragStart: (_) => _swipeDx = 0,
+                  onHorizontalDragUpdate: (d) => _swipeDx += d.delta.dx,
+                  onHorizontalDragEnd: (d) {
+                    // A flick or a deliberate drag both count.
+                    final v = d.primaryVelocity ?? 0;
+                    if (_swipeDx.abs() > 60 || v.abs() > 300) {
+                      _shiftDay(
+                        (_swipeDx.abs() > 60 ? _swipeDx : v) < 0 ? 1 : -1,
+                      );
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: date,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2100),
+                              );
+                              if (picked != null) {
+                                ref
+                                    .read(focusedDayProvider.notifier)
+                                    .set(Day.fromDateTime(picked));
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(rel, style: t.titleLarge),
+                                  Text(
+                                    DateFormat.yMMMMd().format(date),
+                                    style: t.bodyMedium?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    if (showNow)
-                      TextButton.icon(
-                        onPressed: _toNow,
-                        icon: const Icon(Icons.my_location_rounded, size: 18),
-                        label: const Text('Now'),
-                      ),
-                    IconButton(
-                      tooltip: hourLevel
-                          ? 'Zoom out to the day'
-                          : 'Zoom in to an hour',
-                      onPressed: () => ref
-                          .read(dialModeProvider.notifier)
-                          .set(
-                            hourLevel
-                                ? const DialMode.day()
-                                : const DialMode.live(),
+                        if (showNow)
+                          TextButton.icon(
+                            onPressed: _toNow,
+                            icon: const Icon(
+                              Icons.my_location_rounded,
+                              size: 18,
+                            ),
+                            label: const Text('Now'),
                           ),
-                      icon: Icon(
-                        hourLevel
-                            ? Icons.zoom_out_map_rounded
-                            : Icons.timelapse_rounded,
-                      ),
+                        IconButton(
+                          tooltip: hourLevel
+                              ? 'Zoom out to the day'
+                              : 'Zoom in to an hour',
+                          onPressed: () => ref
+                              .read(dialModeProvider.notifier)
+                              .set(
+                                hourLevel
+                                    ? const DialMode.day()
+                                    : const DialMode.live(),
+                              ),
+                          icon: Icon(
+                            hourLevel
+                                ? Icons.zoom_out_map_rounded
+                                : Icons.timelapse_rounded,
+                          ),
+                        ),
+                        if (!planning)
+                          IconButton(
+                            tooltip: 'Plan mode: sketch freely, then ✓ to save',
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              ref.read(planModeProvider.notifier).set(true);
+                            },
+                            icon: const Icon(Icons.draw_rounded),
+                          ),
+                        DayMenuButton(day: focused),
+                      ],
                     ),
-                    if (!planning)
-                      IconButton(
-                        tooltip: 'Plan mode: sketch freely, then ✓ to save',
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          ref.read(planModeProvider.notifier).set(true);
-                        },
-                        icon: const Icon(Icons.draw_rounded),
-                      ),
-                    DayMenuButton(day: focused),
-                  ],
+                  ),
                 ),
-              ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  child: planning
+                      ? _PlanBanner(
+                          sketches: sketches,
+                          onDiscard: _discardPlan,
+                          onSave: _savePlan,
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pages,
+                    onPageChanged: (i) => ref
+                        .read(focusedDayProvider.notifier)
+                        .set(Day.fromEpochDay(i)),
+                    itemBuilder: (_, i) => DayPage(day: Day.fromEpochDay(i)),
+                  ),
+                ),
+              ],
             ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              child: planning
-                  ? _PlanBanner(
-                      sketches: sketches,
-                      onDiscard: _discardPlan,
-                      onSave: _savePlan,
-                    )
-                  : const SizedBox(width: double.infinity),
-            ),
-            Expanded(
-              child: PageView.builder(
-                controller: _pages,
-                onPageChanged: (i) => ref
-                    .read(focusedDayProvider.notifier)
-                    .set(Day.fromEpochDay(i)),
-                itemBuilder: (_, i) => DayPage(day: Day.fromEpochDay(i)),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -256,18 +275,19 @@ class _DayPageState extends ConsumerState<DayPage> {
 
   /// A colour for a new entry that differs from the entries it touches or
   /// overlaps, cycling through the palette so a day reads as many colours.
-  int _colorFor(List<PlanBlock> existing, int start, int end) {
-    final near = {
+  int _colorFor(List<PlanBlock> existing, int start, int end) => pickEntryColor(
+    [
       for (final b in existing)
-        if (b.startMin <= end && b.endMin >= start)
-          b.color ?? fallbackEntryColor(b.id),
-    };
-    for (var k = 0; k < entryPalette.length; k++) {
-      final c = entryPalette[(existing.length + k) % entryPalette.length];
-      if (!near.contains(c)) return c;
-    }
-    return entryPalette[existing.length % entryPalette.length];
-  }
+        (
+          start: b.startMin,
+          end: b.endMin,
+          color: b.color ?? fallbackEntryColor(b.id),
+        ),
+    ],
+    start,
+    end,
+    seed: existing.length,
+  );
 
   /// In plan mode edits are sketches until ✓; otherwise they save
   /// instantly. An entry that is already a sketch stays one either way.
@@ -901,4 +921,26 @@ class _PlanBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A faint dot grid, so plan mode reads as a sketch rather than the real
+/// plan.
+class _SketchPaper extends CustomPainter {
+  _SketchPaper(this.ink);
+
+  final Color ink;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const step = 22.0;
+    final dot = Paint()..color = ink.withValues(alpha: 0.09);
+    for (var y = step / 2; y < size.height; y += step) {
+      for (var x = step / 2; x < size.width; x += step) {
+        canvas.drawCircle(Offset(x, y), 1.1, dot);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SketchPaper old) => old.ink != ink;
 }

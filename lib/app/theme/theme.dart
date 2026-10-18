@@ -1,6 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
+export '../../core/entry_colors.dart';
+
 const emojiFontFamily = 'Twemoji';
+
+/// Seed of plan mode's night-violet palette.
+const planSeed = Color(0xFF7B5CFF);
 
 /// Text style for emoji glyphs: the bundled Twemoji font looks the same on
 /// every platform (Linux often has no colour emoji font at all).
@@ -93,28 +98,3 @@ Color blockColor(int argb, Brightness brightness) =>
 /// Readable foreground on a block colour.
 Color onBlockColor(Color c) =>
     c.computeLuminance() > 0.45 ? const Color(0xFF1B1B1F) : Colors.white;
-
-/// Colours for entries and activities: distinct hues that stay readable in
-/// light and dark themes once passed through [blockColor].
-const entryPalette = [
-  0xFF7C6CF2,
-  0xFF3E8ED0,
-  0xFF26A69A,
-  0xFF43B581,
-  0xFF9CCC65,
-  0xFFF2A541,
-  0xFFE5604D,
-  0xFFE86A92,
-  0xFFAB47BC,
-  0xFF8D6E63,
-  0xFF5C6B8A,
-];
-
-/// A stable colour for an entry with none stored (templates, older data).
-int fallbackEntryColor(String id) {
-  var h = 0x811C9DC5;
-  for (final c in id.codeUnits) {
-    h = ((h ^ c) * 0x01000193) & 0xFFFFFFFF;
-  }
-  return entryPalette[h % entryPalette.length];
-}

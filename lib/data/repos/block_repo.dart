@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/entry_colors.dart';
 import '../../core/time/day_minutes.dart';
 import '../../core/time/hlc.dart';
 import '../db/app_database.dart';
@@ -458,6 +459,44 @@ class BlockRepo {
     )..where((t) => t.blockId.isIn(rows.map((r) => r.blockId)))).go();
     return [for (final r in rows) r.blockId];
   }
+
+  /// Gives every entry without a stored colour (made before colours were
+  /// stored) one that differs from the entries it touches. Runs at startup;
+  /// a no-op once everything has a colour.
+  Future<void> assignMissingColors() => _db.transaction(() async {
+    final saved =
+        await (_db.select(_db.blocks)
+              ..where((t) => t.deleted.equals(false))
+              ..orderBy([(t) => OrderingTerm.asc(t.startMin)]))
+            .get();
+    final edits = await _db.select(_db.blockEdits).get();
+    if (saved.every((b) => b.color != null) &&
+        edits.every((e) => e.color != null)) {
+      return;
+    }
+    final placed = <({int start, int end, int color})>[
+      for (final b in saved)
+        if (b.color != null)
+          (start: b.startMin, end: b.startMin + b.durMin, color: b.color!),
+    ];
+    var seed = 0;
+    for (final b in saved.where((b) => b.color == null)) {
+      final end = b.startMin + b.durMin;
+      final c = pickEntryColor(placed, b.startMin, end, seed: seed++);
+      placed.add((start: b.startMin, end: end, color: c));
+      await (_db.update(_db.blocks)..where((t) => t.id.equals(b.id))).write(
+        BlocksCompanion(color: Value(c), hlc: Value(_clock.now())),
+      );
+    }
+    for (final e in edits.where((e) => e.color == null)) {
+      final end = e.startMin + e.durMin;
+      final c = pickEntryColor(placed, e.startMin, end, seed: seed++);
+      placed.add((start: e.startMin, end: end, color: c));
+      await (_db.update(_db.blockEdits)
+            ..where((t) => t.blockId.equals(e.blockId)))
+          .write(BlockEditsCompanion(color: Value(c)));
+    }
+  });
 
   // ── instant edits (outside plan mode) ───────────────────────────────────
 

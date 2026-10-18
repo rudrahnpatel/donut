@@ -38,7 +38,7 @@ class ClockPainter extends CustomPainter {
     this.nowU,
     this.dimAll = false,
     this.ghosts = const [],
-    this.showOverflow = false,
+    this.lapOffset = 0,
   });
 
   final DialSpec spec;
@@ -60,8 +60,12 @@ class ClockPainter extends CustomPainter {
   /// Busy times from other calendars, day-relative.
   final List<(int, int)> ghosts;
 
-  /// Force the overflow lane track visible (e.g. during a drag).
-  final bool showOverflow;
+  /// While the hour changes, entries glide between rings: each is drawn
+  /// [lapOffset] laps further out than its final ring (+1 → 0 when moving
+  /// forward an hour, so time visibly flows inward; -1 → 0 going back).
+  final double lapOffset;
+
+  bool get _animating => lapOffset != 0;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -98,7 +102,7 @@ class ClockPainter extends CustomPainter {
       _block(canvas, g, b, mine, selected: b.id == selectedId);
       _emoji(canvas, g, b, mine);
     }
-    _pastScrim(canvas, g);
+    if (!_animating) _pastScrim(canvas, g);
     if (spec.isHour) _captions(canvas, g);
     if (preview != null) {
       final p = preview!;
@@ -113,15 +117,55 @@ class ClockPainter extends CustomPainter {
     }
     if (selectedId != null && preview == null) {
       final sel = byId[selectedId];
-      if (sel != null) _handles(canvas, g, sel);
+      if (sel != null && !_animating) _handles(canvas, g, sel);
     }
-    _nowHand(canvas, g);
+    if (!_animating) _nowHand(canvas, g);
   }
 
   /// Only blocks touching the two rings are drawn; their parts beyond the
   /// rings spill onto the overflow lane. Blocks wholly outside are not
   /// shown at all, or the lane would fill with unrelated hours.
-  bool _inWindow(int s, int e) => e > spec.origin && s < spec.end;
+  /// While animating, the window also covers the hour leaving the rings so
+  /// its entries can glide away instead of vanishing.
+  bool _inWindow(int s, int e) {
+    final lo = spec.origin - (lapOffset > 0 ? spec.turn : 0);
+    final hi = spec.end + (lapOffset < 0 ? spec.turn : 0);
+    return e > lo && s < hi;
+  }
+
+  /// In the window once the animation settles.
+  bool _inFinalWindow(int s, int e) => e > spec.origin && s < spec.end;
+
+  /// Ring position of [lane]: -1 inside band, 0 inner, 1 outer, 2 outside.
+  static int _lap(Lane lane) => switch (lane) {
+    Lane.before => -1,
+    Lane.inner => 0,
+    Lane.outer => 1,
+    Lane.after => 2,
+  };
+
+  /// Radii for [lane], shifted by [lapOffset] mid-animation by blending
+  /// between neighbouring rings.
+  (double, double) _radii(ClockGeometry g, Lane lane) {
+    if (!_animating) return g.laneBounds(lane);
+    const order = [Lane.before, Lane.inner, Lane.outer, Lane.after];
+    final x = (_lap(lane) + lapOffset).clamp(-1.0, 2.0);
+    final k = math.min(x.floor(), 1);
+    final f = x - k;
+    final (a0, a1) = g.laneBounds(order[k + 1]);
+    final (b0, b1) = g.laneBounds(order[k + 2]);
+    return (a0 + (b0 - a0) * f, a1 + (b1 - a1) * f);
+  }
+
+  /// Opacity factor for an entry on [lane]: the bands and the hour dial's
+  /// outer (next-hour) ring are faded; blended mid-animation.
+  double _laneFade(Lane lane) {
+    final levels = [0.55, 1.0, spec.isHour ? 0.5 : 1.0, 0.55];
+    final x = (_lap(lane) + lapOffset).clamp(-1.0, 2.0) + 1;
+    final k = math.min(x.floor(), 2);
+    final f = x - k;
+    return levels[k] + (levels[k + 1] - levels[k]) * f;
+  }
 
   void _tracks(Canvas canvas, ClockGeometry g) {
     final track = Paint()..color = scheme.surfaceContainerHighest;
@@ -129,21 +173,11 @@ class ClockPainter extends CustomPainter {
       canvas.drawPath(_annulus(g, lane), track);
     }
     // The thin bands for time before (inside) and after (outside) the two
-    // rings appear only when something spills onto them.
-    bool spills(int st, int en, Lane lane) =>
-        _inWindow(st, en) &&
-        (lane == Lane.before ? st < spec.origin : en > spec.end);
+    // rings are always there, faintly, so the dial keeps the same shape in
+    // every hour whether or not anything spills onto them.
+    final band = Paint()..color = scheme.surfaceContainer;
     for (final lane in [Lane.before, Lane.after]) {
-      final needed =
-          showOverflow ||
-          blocks.any((b) => spills(b.start, b.end, lane)) ||
-          (preview != null && spills(preview!.start, preview!.end, lane));
-      if (needed) {
-        canvas.drawPath(
-          _annulus(g, lane),
-          Paint()..color = scheme.surfaceContainerHigh,
-        );
-      }
+      canvas.drawPath(_annulus(g, lane), band);
     }
   }
 
@@ -295,7 +329,7 @@ class ClockPainter extends CustomPainter {
         final onLane = arc.lane.isOverflow;
         final count = onLane ? 1 : lp.count;
         final index = onLane ? 0 : lp.index;
-        final (lr0, lr1) = g.laneBounds(arc.lane);
+        final (lr0, lr1) = _radii(g, arc.lane);
         final w = (lr1 - lr0) / count;
         // Ring edges keep a 2.5 px margin; an edge shared with another
         // block's sub-lane gives up half of the gap between them.
@@ -330,11 +364,11 @@ class ClockPainter extends CustomPainter {
 
     for (final run in runs) {
       final path = _runPath(g, run);
-      final onLane = run.first.lane.isOverflow;
-      // On the hour dial the outer ring is a preview of the next hour.
-      final peek = spec.isHour && run.first.lane == Lane.outer;
+      // Bands and the hour dial's next-hour ring are faded; an entry that
+      // is leaving the rings fades out as the animation settles.
+      final leaving = _inFinalWindow(b.start, b.end) ? 1.0 : lapOffset.abs();
       final fill = base.withValues(
-        alpha: onLane ? alpha * 0.55 : (peek ? alpha * 0.5 : alpha),
+        alpha: alpha * _laneFade(run.first.lane) * leaving,
       );
       canvas.drawPath(path, Paint()..color = fill);
       // Soften corners: a thin stroke in the same colour with round joins.
@@ -425,7 +459,7 @@ class ClockPainter extends CustomPainter {
         piece.end.toDouble(),
       )) {
         if (arc.lane.isOverflow) continue;
-        final (lr0, lr1) = g.laneBounds(arc.lane);
+        final (lr0, lr1) = _radii(g, arc.lane);
         final w = (lr1 - lr0) / piece.count;
         final r = lr0 + w * (piece.index + 0.5);
         final size = math.min(w * 0.62, (lr1 - lr0) * 0.52);
@@ -477,6 +511,10 @@ class ClockPainter extends CustomPainter {
       return;
     }
     final scrim = Paint()..color = scheme.surface.withValues(alpha: 0.45);
+    // Everything on the inside band is earlier than the inner ring, so it
+    // is past as soon as the inner ring's hour has started.
+    if (end > spec.origin) canvas.drawPath(_annulus(g, Lane.before), scrim);
+    if (dimAll) canvas.drawPath(_annulus(g, Lane.after), scrim);
     for (final p in spec.pieces(spec.origin.toDouble(), end)) {
       if (p.lane.isOverflow) continue;
       final (r0, r1) = g.laneBounds(p.lane);
@@ -553,7 +591,7 @@ class ClockPainter extends CustomPainter {
       old.scheme != scheme ||
       old.ghosts != ghosts ||
       old.captions != captions ||
-      old.showOverflow != showOverflow;
+      old.lapOffset != lapOffset;
 }
 
 /// A stretch of one block on one ring at a fixed sub-lane.

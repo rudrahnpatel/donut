@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../data/repos/settings_repo.dart';
+import '../features/day/plan_mode.dart';
 import 'providers.dart';
 import 'shell.dart';
 import 'theme/theme.dart';
@@ -13,6 +14,7 @@ class DonutApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(settingsProvider);
+    final planning = ref.watch(planningProvider);
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         final seed = Color(s.seedColor);
@@ -31,16 +33,27 @@ class DonutApp extends ConsumerWidget {
           );
         }
         if (s.amoled) dark = amoled(dark);
+        // Plan mode is a different place, like an incognito window: the
+        // whole app turns to one night-violet palette, whatever the normal
+        // theme, and fades back when the plan is saved or discarded.
+        final plan = ColorScheme.fromSeed(
+          seedColor: planSeed,
+          brightness: Brightness.dark,
+        );
         return MaterialApp(
           title: 'Donut',
           debugShowCheckedModeBanner: false,
-          theme: buildTheme(light),
-          darkTheme: buildTheme(dark),
-          themeMode: switch (s.theme) {
-            ThemePref.system => ThemeMode.system,
-            ThemePref.light => ThemeMode.light,
-            ThemePref.dark => ThemeMode.dark,
-          },
+          theme: buildTheme(planning ? plan : light),
+          darkTheme: buildTheme(planning ? plan : dark),
+          themeMode: planning
+              ? ThemeMode.dark
+              : switch (s.theme) {
+                  ThemePref.system => ThemeMode.system,
+                  ThemePref.light => ThemeMode.light,
+                  ThemePref.dark => ThemeMode.dark,
+                },
+          themeAnimationDuration: const Duration(milliseconds: 450),
+          themeAnimationCurve: Curves.easeInOutCubic,
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
           // emoji_picker_flutter still reads the framework's built-in Material
           // theme; the bridge hands it ours until it moves to material_ui.

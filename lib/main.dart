@@ -6,6 +6,7 @@ import 'app/app.dart';
 import 'app/providers.dart';
 import 'core/time/hlc.dart';
 import 'data/db/app_database.dart';
+import 'data/repos/block_repo.dart';
 import 'data/repos/library_repo.dart';
 import 'dev/dev_harness.dart';
 
@@ -32,6 +33,7 @@ Future<void> main() async {
   if (h != null) clock.receive(h);
 
   await LibraryRepo(db, clock).seedIfEmpty();
+  await BlockRepo(db, clock).assignMissingColors();
   await dev?.seed(db, clock);
 
   runApp(
