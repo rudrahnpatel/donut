@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/providers.dart';
 import '../../data/repos/settings_repo.dart';
+import '../reminders/reminder_providers.dart';
 import '../sync/sync_settings_section.dart';
 
 const _seedChoices = [
@@ -179,10 +180,17 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 SwitchListTile(
-                  title: const Text('Remind me when a block starts'),
-                  subtitle: const Text('Saved blocks only — drafts stay quiet'),
+                  title: const Text('Remind me when an entry starts'),
+                  subtitle: const Text(
+                    'Plan-mode sketches stay quiet until you tick ✓',
+                  ),
                   value: s.remindersEnabled,
-                  onChanged: (v) => set(s.copyWith(remindersEnabled: v)),
+                  onChanged: (v) {
+                    if (v) {
+                      ref.read(reminderServiceProvider).requestPermission();
+                    }
+                    set(s.copyWith(remindersEnabled: v));
+                  },
                 ),
                 ListTile(
                   enabled: s.remindersEnabled,

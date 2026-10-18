@@ -7,6 +7,7 @@ import '../core/time/day_minutes.dart';
 import '../features/calendar/month_screen.dart';
 import '../features/day/day_screen.dart';
 import '../features/library/library_screen.dart';
+import '../features/reminders/reminder_providers.dart';
 import '../features/settings/settings_screen.dart';
 import 'providers.dart';
 
@@ -43,6 +44,7 @@ class _AppShellState extends ConsumerState<AppShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _onNewDay();
+    startReminders(ref);
   }
 
   @override
