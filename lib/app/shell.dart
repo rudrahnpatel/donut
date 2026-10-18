@@ -9,6 +9,7 @@ import '../features/day/day_screen.dart';
 import '../features/library/library_screen.dart';
 import '../features/reminders/reminder_providers.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/sync/sync_controller.dart';
 import '../features/widget_bridge/widget_bridge.dart';
 import 'providers.dart';
 
@@ -47,6 +48,7 @@ class _AppShellState extends ConsumerState<AppShell>
     _onNewDay();
     startReminders(ref);
     startWidgetBridge(ref);
+    ref.read(syncControllerProvider.notifier).start();
   }
 
   @override
@@ -58,7 +60,10 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _onNewDay();
+    if (state == AppLifecycleState.resumed) {
+      _onNewDay();
+      ref.read(syncControllerProvider.notifier).syncNow();
+    }
   }
 
   /// Refreshes "today", tops up recurring blocks, and re-arms the midnight

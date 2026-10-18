@@ -14,6 +14,7 @@ import '../clock/clock_painter.dart';
 import '../clock/clock_view.dart';
 import '../clock/spiral_math.dart';
 import '../radial_menu/marking_menu_controller.dart';
+import '../sync/sync_controller.dart';
 import '../templates/day_actions.dart';
 import 'plan_mode.dart';
 import 'agenda_list.dart';
@@ -570,6 +571,12 @@ class _DayPageState extends ConsumerState<DayPage> {
 
     final hourLevel = mode.level == DialLevel.hour;
     final spec = mode.specFor(day, nowAbs);
+    // Busy times from your other calendars, relative to this page's day.
+    final ghosts = [
+      for (final (s, e) in ref.watch(ghostsProvider))
+        if (e > day.startMin - minutesPerDay && s < day.endMin + minutesPerDay)
+          (s - day.startMin, e - day.startMin),
+    ];
     final paintBlocks = [
       for (final b in plan.blocks)
         PaintBlock(
@@ -597,6 +604,7 @@ class _DayPageState extends ConsumerState<DayPage> {
           ? ('', lapCaption(shown.origin + 60, use24h: settings.use24h))
           : ('AM', 'PM'),
       blocks: paintBlocks,
+      ghosts: ghosts,
       selectedId: _selected,
       isToday: day == today,
       isPast: day < today,
