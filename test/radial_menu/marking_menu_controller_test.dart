@@ -1,0 +1,125 @@
+import 'dart:math' as math;
+import 'dart:ui';
+
+import 'package:donut/features/radial_menu/marking_menu_controller.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+List<MarkingItem> _emojis() => [
+  for (final e in ['😀', '📚', '💪', '🍽️', '😴'])
+    MarkingItem(id: 'emoji:$e', glyph: e),
+];
+
+List<MarkingItem> _activities() => [
+  MarkingItem(
+    id: 'activity:study',
+    glyph: '📚',
+    children: () => const [
+      MarkingItem(id: 'todo:ch4', glyph: '•', label: 'Ch. 4 notes'),
+      MarkingItem(id: 'todo:pp', glyph: '•', label: 'Past paper'),
+    ],
+  ),
+  const MarkingItem(id: 'activity:gym', glyph: '💪'),
+];
+
+List<MarkingItem> _root() => [
+  MarkingItem(id: 'group:emoji', glyph: '😀', children: _emojis),
+  MarkingItem(id: 'group:tasks', glyph: '✅', children: _activities),
+];
+
+void main() {
+  const screen = Rect.fromLTWH(0, 0, 400, 800);
+  const origin = Offset(200, 500);
+
+  MarkingMenuController make() =>
+      MarkingMenuController(origin: origin, rootItems: _root(), bounds: screen);
+
+  test('opens upward when there is room', () {
+    final m = make();
+    final l = m.levels.single;
+    for (var i = 0; i < l.items.length; i++) {
+      expect(l.itemPos(i).dy, lessThan(origin.dy));
+    }
+  });
+
+  test('releasing at the origin cancels', () {
+    final m = make();
+    m.pointer(origin + const Offset(5, 5), Duration.zero);
+    expect(m.release(origin), isNull);
+  });
+
+  test('flicking towards an item highlights it by angle, not hit box', () {
+    final m = make();
+    final l = m.levels.single;
+    final dir = Offset(math.cos(l.angles[0]), math.sin(l.angles[0]));
+    m.pointer(origin + dir * 50, Duration.zero);
+    expect(m.highlightedItem?.id, 'group:emoji');
+  });
+
+  test('reaching a group opens its sub-fan centred on it', () {
+    final m = make();
+    final l = m.levels.single;
+    m.pointer(l.itemPos(1), Duration.zero);
+    expect(m.levels, hasLength(2));
+    expect(m.levels.last.anchor, l.itemPos(1));
+  });
+
+  test('resting on a group for the dwell time opens it', () {
+    final m = make();
+    final l = m.levels.single;
+    final dir = Offset(math.cos(l.angles[0]), math.sin(l.angles[0]));
+    final p = origin + dir * 50;
+    m.pointer(p, Duration.zero);
+    expect(m.levels, hasLength(1));
+    m.tick(p, const Duration(milliseconds: 250));
+    expect(m.levels, hasLength(2));
+  });
+
+  test('three-level path: Tasks → Study → to-do', () {
+    final m = make();
+    var t = Duration.zero;
+    void go(Offset p) {
+      t += const Duration(milliseconds: 16);
+      m.pointer(p, t);
+    }
+
+    go(m.levels[0].itemPos(1)); // Tasks
+    go(m.levels[1].itemPos(0)); // Study
+    expect(m.levels, hasLength(3));
+    final todo = m.levels[2].itemPos(1);
+    go(todo);
+    expect(m.release(todo)?.id, 'todo:pp');
+  });
+
+  test('releasing in a sub-fan centre picks its parent item', () {
+    final m = make();
+    m.pointer(m.levels[0].itemPos(1), Duration.zero);
+    final study = m.levels[1].itemPos(0);
+    m.pointer(study, const Duration(milliseconds: 16));
+    expect(m.release(study)?.id, 'activity:study');
+  });
+
+  test('moving back towards the origin collapses the sub-fan', () {
+    final m = make();
+    m.pointer(m.levels[0].itemPos(0), Duration.zero);
+    expect(m.levels, hasLength(2));
+    m.pointer(origin + const Offset(0, -10), const Duration(milliseconds: 16));
+    expect(m.levels, hasLength(1));
+  });
+
+  test('items stay on screen near an edge', () {
+    final m = MarkingMenuController(
+      origin: const Offset(10, 20),
+      rootItems: _root(),
+      bounds: screen,
+    );
+    final l = m.levels.single;
+    for (var i = 0; i < l.items.length; i++) {
+      final p = l.itemPos(i);
+      expect(
+        screen.deflate(MarkingMenuController.itemRadius).contains(p),
+        isTrue,
+        reason: 'item $i at $p',
+      );
+    }
+  });
+}
