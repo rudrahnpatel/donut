@@ -386,7 +386,19 @@ class _DayPageState extends ConsumerState<DayPage> {
         await _setActivity(blockId, todo.activityId);
         await lib.updateTodo(todo.id, blockId: Value(blockId));
       case 'pinstart' || 'pinend':
-        await _pin(blockId, atEnd: kind == 'pinend', what: value);
+        final b = ref
+            .read(dayPlanProvider(day))
+            .value
+            ?.blocks
+            .where((b) => b.id == blockId)
+            .firstOrNull;
+        if (b == null) return;
+        final atEnd = kind == 'pinend';
+        await _pin(
+          atEnd ? b.endMin : b.startMin,
+          what: value,
+          title: atEnd ? 'Pin the end' : 'Pin the start',
+        );
       case 'group' || 'more':
         if (value == 'tasks') {
           final a = await pickActivity(context);
@@ -397,27 +409,19 @@ class _DayPageState extends ConsumerState<DayPage> {
     }
   }
 
-  /// Drops a pin at an entry's start or end. [what] is a [PinKind] name,
-  /// `custom` (ask for text) or `text:<recent custom text>`.
+  /// Drops a pin at absolute minute [atMin]. [what] is a [PinKind] name,
+  /// `custom` (ask for text, under [title]) or `text:<recent custom text>`.
   Future<void> _pin(
-    String blockId, {
-    required bool atEnd,
+    int atMin, {
     required String what,
+    String title = 'Pin',
   }) async {
-    final b = ref
-        .read(dayPlanProvider(day))
-        .value
-        ?.blocks
-        .where((b) => b.id == blockId)
-        .firstOrNull;
-    if (b == null) return;
     var kind = PinKind.custom;
     String? label;
     if (what == 'custom') {
       final text = await promptText(
         context,
-        title: atEnd ? 'Pin the end' : 'Pin the start',
-        initial: '',
+        title: title,
         hint: 'e.g. train leaves',
       );
       label = text?.trim();
@@ -429,12 +433,7 @@ class _DayPageState extends ConsumerState<DayPage> {
     }
     await ref
         .read(pinRepoProvider)
-        .create(
-          atEnd ? b.endMin : b.startMin,
-          kind,
-          label: label,
-          draft: _sketching(null),
-        );
+        .create(atMin, kind, label: label, draft: _sketching(null));
     HapticFeedback.lightImpact();
   }
 
@@ -542,6 +541,19 @@ class _DayPageState extends ConsumerState<DayPage> {
 
   // ── marking menu ───────────────────────────────────────────────────────
 
+  /// Pin kinds in [kinds] order, then recent custom texts, then Custom….
+  /// Ids are `<side>:<kind>`, `<side>:text:<text>` or `<side>:custom`.
+  List<MarkingItem> _pinItems(String side, List<PinKind> kinds) {
+    final texts = ref.read(recentPinTextsProvider).value ?? const <String>[];
+    return [
+      for (final k in kinds)
+        MarkingItem(id: '$side:${k.name}', glyph: k.glyph, label: k.verb),
+      for (final t in texts)
+        MarkingItem(id: '$side:text:$t', glyph: '📌', label: t),
+      MarkingItem(id: '$side:custom', glyph: '✏️', label: 'Custom…'),
+    ];
+  }
+
   List<MarkingItem> _menuItems(String blockId) {
     final settings = ref.read(settingsProvider);
     final ranking = ref.read(quickRankingProvider).value;
@@ -549,7 +561,6 @@ class _DayPageState extends ConsumerState<DayPage> {
         ref.read(activitiesProvider).value ?? const <ActivityRow>[];
     final todos = ref.read(allTodosProvider).value ?? const <TodoRow>[];
     final labels = ref.read(recentLabelsProvider).value ?? const <String>[];
-    final pinTexts = ref.read(recentPinTextsProvider).value ?? const <String>[];
 
     final rank = {
       for (final (i, id) in (ranking?.activityIds ?? const <String>[]).indexed)
@@ -600,19 +611,12 @@ class _DayPageState extends ConsumerState<DayPage> {
     // A pin at the entry's start (left) or end (right). The likeliest kind
     // comes first, so a straight flick picks it: leave by the start, reach
     // by the end.
-    List<MarkingItem> pinItems(String side, List<PinKind> kinds) => [
-      for (final k in kinds)
-        MarkingItem(id: '$side:${k.name}', glyph: k.glyph, label: k.verb),
-      for (final t in pinTexts)
-        MarkingItem(id: '$side:text:$t', glyph: '📌', label: t),
-      MarkingItem(id: '$side:custom', glyph: '✏️', label: 'Custom…'),
-    ];
-    final startPins = pinItems('pinstart', const [
+    final startPins = _pinItems('pinstart', const [
       PinKind.leaveBy,
       PinKind.meetingAt,
       PinKind.reachBy,
     ]);
-    final endPins = pinItems('pinend', const [
+    final endPins = _pinItems('pinend', const [
       PinKind.reachBy,
       PinKind.meetingAt,
       PinKind.leaveBy,
@@ -796,6 +800,16 @@ class _DayPageState extends ConsumerState<DayPage> {
       onZoom: (zoomIn, u) => _onZoom(mode, zoomIn, u),
       menuItems: _menuItems,
       onMenuPick: _onMenuPick,
+      // Holding an empty spot pins that moment.
+      pinMenuItems: () => _pinItems('pinat', const [
+        PinKind.reachBy,
+        PinKind.meetingAt,
+        PinKind.leaveBy,
+      ]),
+      onPinPick: (u, item) => _pin(
+        day.startMin + u,
+        what: item.id.substring(item.id.indexOf(':') + 1),
+      ),
       menuItemColor: (item) {
         if (!item.id.startsWith('activity:')) return null;
         final a = activities[item.id.substring(9)];
@@ -823,10 +837,12 @@ class _DayPageState extends ConsumerState<DayPage> {
                 'Inner ring is this hour, outer ring the next.\n'
                 'Tap an entry to move or resize it; hold it for tasks and '
                 'labels, or flick left/right to pin its start/end.\n'
+                'Hold an empty spot to pin that moment.\n'
                 'Hold the centre to jump to another hour.'
           : 'Drag along a ring to add an entry.\n'
                 'Inner ring is AM, outer ring is PM.\n'
-                'Tap an hour to zoom in; hold the centre to pick one.',
+                'Tap an hour to zoom in; hold the centre to pick one.\n'
+                'Hold an empty spot to pin that moment.',
     );
 
     return LayoutBuilder(

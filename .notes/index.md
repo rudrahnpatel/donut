@@ -10,4 +10,4 @@
 - [reminders_per_platform.md](reminders_per_platform.md) — notifications when saved entries start: exact alarms on Android, an in-app 30 s check on Linux
 - [android_clock_widget.md](android_clock_widget.md) — home-screen widget: Kotlin-drawn day dial bitmap fed by home_widget JSON, live AnalogClock hour hand on top
 - [google_sync_architecture.md](google_sync_architecture.md) — Google sign-in per platform, per-device Drive files merged by HLC, two-way "Donut" calendar mirror and free/busy ghost arcs
-- [pins.md](pins.md) — hold an entry, flick right/left to pin its end/start (Reach by, Meeting at, Leave by, custom); own table, synced, reminds 10 min early
+- [pins.md](pins.md) — hold an entry and flick right/left to pin its end/start, or hold an empty spot to pin that moment (Reach by, Meeting at, Leave by, custom); own table, synced, reminds 10 min early

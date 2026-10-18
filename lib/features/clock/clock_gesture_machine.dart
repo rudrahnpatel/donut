@@ -61,6 +61,15 @@ class MenuOpenEvent extends ClockEvent {
   final bool mouseMode;
 }
 
+/// Opens the pin menu for an empty spot of a ring, at snapped minute [u]
+/// (a hold there, or a right-click with [mouseMode]).
+class EmptyHoldEvent extends ClockEvent {
+  const EmptyHoldEvent(this.u, this.position, {this.mouseMode = false});
+  final int u;
+  final Offset position;
+  final bool mouseMode;
+}
+
 /// Opens the hour picker from the hub.
 class HubHoldEvent extends ClockEvent {
   const HubHoldEvent(this.position, {this.mouseMode = false});
@@ -102,6 +111,7 @@ class HapticEvent extends ClockEvent {
 ///
 /// ```text
 /// idle ─down─▶ pressedEmpty ─move>slop─▶ creating ─up─▶ CreateEvent
+///          │                ├─hold────▶ menu (pins) ─up─▶ MenuReleaseEvent
 ///          │                └─up──────▶ TapEmptyEvent
 ///          ├─▶ pressedBlock ─move>slop─▶ creating (or moving, if selected)
 ///          │                ├─hold────▶ menu ─up─▶ MenuReleaseEvent
@@ -153,7 +163,10 @@ class ClockGestureMachine {
   bool get isIdle => _state is _Idle;
   bool get isInMenu => _state is _Menu;
   bool get isDragging => _state is _Dragging;
-  bool get wantsHoldTimer => _state is _PressedBlock || _state is _PressedHub;
+  bool get wantsHoldTimer =>
+      _state is _PressedBlock ||
+      _state is _PressedHub ||
+      _state is _PressedEmpty;
 
   /// Whether a press at [p] belongs to the dial. Presses elsewhere are left
   /// for other gestures (e.g. swiping between days).
@@ -197,7 +210,11 @@ class ClockGestureMachine {
     final fraction = (g.distanceFromCenter(p) - r0) / (r1 - r0);
     final span = _spanAt(u, fraction);
     if (secondary) {
-      if (span != null) emit(MenuOpenEvent(span.id, p, mouseMode: true));
+      emit(
+        span != null
+            ? MenuOpenEvent(span.id, p, mouseMode: true)
+            : EmptyHoldEvent(snapMinutes(u, snapStep), p, mouseMode: true),
+      );
       _state = const _Idle();
       return;
     }
@@ -289,11 +306,16 @@ class ClockGestureMachine {
     if (s is _Dragging) emit(const ClearPreviewEvent());
   }
 
-  /// Called by the host's hold timer. Opens the block menu, or the hour
-  /// picker on the hub, if the finger is still resting.
+  /// Called by the host's hold timer. Opens the block menu, the pin menu on
+  /// an empty spot, or the hour picker on the hub, if the finger is still
+  /// resting.
   void holdElapsed() {
     final s = _state;
-    if (s is _PressedBlock) {
+    if (s is _PressedEmpty) {
+      _state = const _Menu();
+      emit(const HapticEvent(HapticKind.hold));
+      emit(EmptyHoldEvent(snapMinutes(s.u, snapStep), _downPos));
+    } else if (s is _PressedBlock) {
       _state = const _Menu();
       emit(const HapticEvent(HapticKind.hold));
       emit(MenuOpenEvent(s.span.id, _downPos));

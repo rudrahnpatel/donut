@@ -62,6 +62,18 @@ class _MarkingMenuLayerState extends State<MarkingMenuLayer> {
       final ph = parent.highlighted;
       if (ph != null) label = parent.items[ph].label;
     }
+    // A titled menu (the pin menu on an empty spot) names what a release
+    // makes: "Reach by 4:35 PM".
+    if (c.title != null) {
+      label = '${c.highlightedItem?.label ?? '📍'} ${c.title}';
+    }
+    // Above everything, or above a root list (below it without room).
+    var bubbleTop = c.levels.first.anchor.dy - 230;
+    if (c.levels.first.rows case final rows?) {
+      final ys = rows.map((r) => r.dy);
+      final above = ys.reduce(math.min) - 18 - 6 - 48;
+      bubbleTop = above >= 12 ? above : ys.reduce(math.max) + 18 + 12;
+    }
 
     final stack = Stack(
       children: [
@@ -92,7 +104,7 @@ class _MarkingMenuLayerState extends State<MarkingMenuLayer> {
           Positioned(
             left: 0,
             right: 0,
-            top: (c.levels.first.anchor.dy - 230).clamp(12.0, double.infinity),
+            top: bubbleTop.clamp(12.0, double.infinity),
             child: IgnorePointer(
               child: Center(
                 child: Container(

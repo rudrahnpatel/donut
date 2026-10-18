@@ -58,6 +58,8 @@ class ClockView extends StatefulWidget {
     this.selectedId,
     this.ghosts = const [],
     this.pins = const [],
+    this.pinMenuItems,
+    this.onPinPick,
     this.menuItemColor,
   });
 
@@ -77,6 +79,12 @@ class ClockView extends StatefulWidget {
 
   /// Pins ("Reach by 4:55"), day-relative.
   final List<PaintPin> pins;
+
+  /// The menu for holding an empty spot of a ring (pin kinds), and what to
+  /// do with the pick at day-relative minute `u`. Without them, holding an
+  /// empty spot does nothing.
+  final List<MarkingItem> Function()? pinMenuItems;
+  final void Function(int u, MarkingItem item)? onPinPick;
 
   /// Shown in the hub when not dragging.
   final Widget Function(DialSpec shown) center;
@@ -141,6 +149,9 @@ class _ClockViewState extends State<ClockView>
   MarkingMenuController? _menu;
   HourPickerController? _picker;
   String? _menuBlockId;
+
+  /// Day-relative minute the open pin menu is for.
+  int? _menuPinU;
   bool _menuMouse = false;
   Offset _menuPointer = Offset.zero;
   final _menuClock = Stopwatch();
@@ -207,6 +218,8 @@ class _ClockViewState extends State<ClockView>
         _openPicker(mouse: e.mouseMode);
       case MenuOpenEvent():
         _openMenu(e.id, _toGlobal(e.position), mouse: e.mouseMode);
+      case EmptyHoldEvent():
+        _openPinMenu(e.u, _toGlobal(e.position), mouse: e.mouseMode);
       case MenuMoveEvent():
         _overlayPointer(_toGlobal(e.position));
       case MenuReleaseEvent():
@@ -307,6 +320,30 @@ class _ClockViewState extends State<ClockView>
     setState(() {});
   }
 
+  void _openPinMenu(int u, Offset global, {required bool mouse}) {
+    final items = widget.pinMenuItems?.call();
+    if (items == null || items.isEmpty) {
+      _machine.cancel();
+      return;
+    }
+    _menuPinU = u;
+    _menuMouse = mouse;
+    _menuPointer = global;
+    _menu = MarkingMenuController(
+      origin: global,
+      rootItems: items,
+      bounds: _screenBounds(),
+      onHighlight: HapticFeedback.selectionClick,
+      title: formatClock(
+        ((u % minutesPerDay) + minutesPerDay) % minutesPerDay,
+        use24h: widget.use24h,
+      ),
+      listRoot: true,
+    );
+    _overlay.show();
+    setState(() {});
+  }
+
   void _openPicker({required bool mouse}) {
     final hooks = widget.hourPicker;
     if (hooks == null) return;
@@ -342,10 +379,12 @@ class _ClockViewState extends State<ClockView>
       if (abs != null) widget.hourPicker?.onPick(abs);
       return;
     }
-    final m = _menu, id = _menuBlockId;
+    final m = _menu, id = _menuBlockId, pinU = _menuPinU;
     final item = m?.release(global);
     _closeOverlay();
-    if (item != null && id != null) widget.onMenuPick(id, item);
+    if (item == null) return;
+    if (id != null) widget.onMenuPick(id, item);
+    if (pinU != null) widget.onPinPick?.call(pinU, item);
   }
 
   void _closeOverlay() {
@@ -355,6 +394,7 @@ class _ClockViewState extends State<ClockView>
     _menu = null;
     _picker = null;
     _menuBlockId = null;
+    _menuPinU = null;
     _overlay.hide();
     if (mounted) setState(() {});
   }
@@ -525,7 +565,12 @@ class _ClockViewState extends State<ClockView>
                               nowU: nowU,
                               dimAll: widget.isPast,
                               ghosts: widget.ghosts,
-                              pins: widget.pins,
+                              pins: [
+                                ...widget.pins,
+                                // Where the pin being chosen will go.
+                                if (_menuPinU != null)
+                                  PaintPin(u: _menuPinU!, glyph: '📍'),
+                              ],
                               lapOffset: _lapOffset,
                             ),
                           ),

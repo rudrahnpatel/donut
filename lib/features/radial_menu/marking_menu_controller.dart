@@ -108,18 +108,23 @@ class MarkingMenuController {
     required List<MarkingItem> rootItems,
     required this.bounds,
     this.onHighlight,
+    this.title,
     bool split = false,
+    bool listRoot = false,
   }) {
     levels = [
-      split
-          ? _splitLayout(origin, rootItems)
-          : _layout(
-              origin,
-              rootItems,
-              _pickBaseAngle(origin),
-              rootRadius,
-              collapseDist: 0,
-            ),
+      if (listRoot)
+        _rootList(origin, rootItems)
+      else if (split)
+        _splitLayout(origin, rootItems)
+      else
+        _layout(
+          origin,
+          rootItems,
+          _pickBaseAngle(origin),
+          rootRadius,
+          collapseDist: 0,
+        ),
     ];
   }
 
@@ -136,6 +141,9 @@ class MarkingMenuController {
   static const Duration dwell = Duration(milliseconds: 200);
 
   final Rect bounds;
+
+  /// What the menu is about (e.g. a time), for the overlay's bubble.
+  final String? title;
 
   /// Called whenever the highlighted item changes (for haptics).
   final void Function()? onHighlight;
@@ -307,6 +315,20 @@ class MarkingMenuController {
       sector,
       radius,
       collapseDist: collapseDist,
+    );
+  }
+
+  /// A root list (the pin menu on an empty spot) stacks upward from the
+  /// finger, where the hand doesn't cover it, or downward without room.
+  MarkingLevel _rootList(Offset origin, List<MarkingItem> items) {
+    const gap = itemRadius + 8 + rowPitch / 2;
+    final room = origin.dy - bounds.top - 8;
+    final up = room >= gap + items.length * rowPitch;
+    return _listLayout(
+      origin,
+      items,
+      up ? -math.pi / 2 : math.pi / 2,
+      collapseDist: 0,
     );
   }
 

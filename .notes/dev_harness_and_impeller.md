@@ -3,7 +3,7 @@
 ## What
 
 A debug-only harness (`lib/dev/dev_harness.dart`) runs the real app against an in-memory demo
-database, optionally plays a synthetic gesture (`DONUT_SCENE=menu|tasks|label|pin|pinned|drag|select|picker`)
+database, optionally plays a synthetic gesture (`DONUT_SCENE=menu|tasks|label|pin|pinned|pinhere|drag|select|picker`)
 and saves its own screenshot, then exits. With `xvfb-run` it renders fully off-screen, so it
 never touches the desktop session or real data.
 

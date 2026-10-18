@@ -345,4 +345,47 @@ void main() {
       expect(list.itemPos(i).dx + list.rowWidth / 2, lessThanOrEqualTo(400));
     }
   });
+
+  group('root list (pin menu on an empty spot)', () {
+    const kinds = [
+      MarkingItem(id: 'pinat:reachBy', glyph: '🏁', label: 'Reach by'),
+      MarkingItem(id: 'pinat:meetingAt', glyph: '🤝', label: 'Meeting at'),
+      MarkingItem(id: 'pinat:leaveBy', glyph: '🚶', label: 'Leave by'),
+      MarkingItem(id: 'pinat:custom', glyph: '✏️', label: 'Custom…'),
+    ];
+    MarkingMenuController at(Offset o) => MarkingMenuController(
+      origin: o,
+      rootItems: kinds,
+      bounds: screen,
+      title: '4:45 PM',
+      listRoot: true,
+    );
+
+    test('stacks upward from the finger, first row nearest', () {
+      const o = Offset(200, 500);
+      final l = at(o).levels.single;
+      expect(l.isList, isTrue);
+      for (var i = 0; i < kinds.length; i++) {
+        expect(l.itemPos(i).dy, lessThan(o.dy));
+        if (i > 0) expect(l.itemPos(i).dy, lessThan(l.itemPos(i - 1).dy));
+      }
+    });
+
+    test('opens downward when there is no room above', () {
+      const o = Offset(200, 120);
+      final l = at(o).levels.single;
+      expect(l.itemPos(0).dy, greaterThan(o.dy));
+    });
+
+    test('a short flick up picks the first kind; resting on the press '
+        'picks nothing', () {
+      const o = Offset(200, 500);
+      final m = at(o);
+      m.pointer(o + const Offset(3, -4), Duration.zero);
+      expect(m.release(o), isNull);
+      m.pointer(o + const Offset(0, -30), const Duration(milliseconds: 16));
+      expect(m.release(o)?.id, 'pinat:reachBy');
+      expect(m.title, '4:45 PM');
+    });
+  });
 }

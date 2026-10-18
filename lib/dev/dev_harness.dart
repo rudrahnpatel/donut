@@ -268,6 +268,11 @@ class DevHarness {
         down(at(target));
         await hold();
         await moveTo(last + const Offset(96, 4));
+      case 'pinhere':
+        // Hold an empty spot (pick one with DONUT_AT), slide into the list.
+        down(at(target));
+        await hold();
+        await moveTo(last + const Offset(0, -40));
       case 'pinned':
         // Pin the end of the block with the list's first row (Reach by),
         // then show the dial with the pin on it.

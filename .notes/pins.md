@@ -9,6 +9,11 @@ A pin marks a moment rather than a span: "Reach by 4:55", "Meeting at 5:00", "Le
   start. A list opens: the likeliest kind comes first (end → Reach by, start → Leave by),
   so a straight flick and release is enough. Next come the other kinds, up to three recent
   custom texts, and *Custom…*.
+- **On an empty spot:** hold an empty part of either ring (or right-click it) and the same
+  list opens at that moment, snapped to the dial's step. It stacks upward from the finger
+  so the hand doesn't cover it (downward without room above). Reach by comes first; a
+  📍 marks the spot on the ring and the bubble reads "Reach by 5:20 PM" as you slide.
+  Moving before the hold time still draws an entry.
 - **On the dial:** a needle across the ring with a round head carrying the kind's glyph.
 - **In the hub and agenda:** the live hour's hub counts down to the next pin within 3 h
   ("🏁 Reach by · 14m"). The agenda lists pins among the entries by time (a pin before an
@@ -34,6 +39,12 @@ A pin marks a moment rather than a span: "Reach by 4:55", "Meeting at 5:00", "Le
   (see `marking_menu_and_hour_picker.md`). Releasing on a pin item without choosing a row
   takes its default kind (the item's id is that kind). `DayPage._pin` reads the entry's
   start or end time and asks for text for *Custom…*.
+- **Empty-spot hold:** `ClockGestureMachine` arms the hold timer for `_PressedEmpty` too.
+  On expiry (or a secondary click) it emits `EmptyHoldEvent(snapped u)`. `ClockView`
+  opens a `MarkingMenuController(listRoot: true, title: time)` from `pinMenuItems`, draws
+  a preview pin at `u` while it's open, and reports the release through `onPinPick`.
+  `DayPage` builds both pin lists with `_pinItems(side, kinds)` and makes the pin with
+  `_pin(atMin, what:)`.
 - **Painting:** `ClockPainter._pins` draws pins after the entries and before the past
   scrim, so past pins dim. Like entries, only pins on the two rings show. A pin exactly at
   the outer ring's end (an entry ending on the hour) is drawn at its 12 o'clock rather than
@@ -58,6 +69,10 @@ flowchart LR
 
 ## Why
 
+- Holding an empty spot was added when the user asked for the pin list there too
+  ("empty space pe toh bhi aana chahiye"), for a moment not tied to an entry. The hold
+  uses the same 300 ms as entries; drawing starts with movement, so a quick drag still
+  draws.
 - The user asked for pins "for reach by, meeting at, etc" on hold + left/right, and chose
   (from options) start/end of the held entry rather than the pressed point or a hold on
   empty ring. Start/end needs no aiming and fits the travel use case: leave by the start

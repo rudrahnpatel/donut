@@ -107,6 +107,39 @@ void main() {
       expect(h.events.whereType<CreateEvent>(), isEmpty);
     });
 
+    test('hold on an empty spot opens the pin menu at the snapped minute', () {
+      final h = Harness();
+      final p = h.at(16 * 60 + 52);
+      h.machine.down(p);
+      expect(h.machine.wantsHoldTimer, isTrue);
+      h.machine.holdElapsed();
+      final e = h.last<EmptyHoldEvent>();
+      expect(e.u, 16 * 60 + 45, reason: '15-minute snap on the day dial');
+      expect(e.mouseMode, isFalse);
+      expect(h.machine.isInMenu, isTrue);
+      h.machine.move(p + const Offset(0, -80));
+      h.machine.up();
+      expect(h.last<MenuReleaseEvent>().position, p + const Offset(0, -80));
+      expect(h.events.whereType<CreateEvent>(), isEmpty);
+      expect(h.events.whereType<TapEmptyEvent>(), isEmpty);
+    });
+
+    test('moving before the hold still draws an entry', () {
+      final h = Harness();
+      h.drag(9 * 60, 10 * 60);
+      h.machine.holdElapsed(); // A late timer after the drag does nothing.
+      expect(h.events.whereType<EmptyHoldEvent>(), isEmpty);
+      expect(h.last<CreateEvent>().end, 600);
+    });
+
+    test('right-click on an empty spot opens the pin menu in mouse mode', () {
+      final h = Harness();
+      h.machine.down(h.at(300), mouse: true, secondary: true);
+      final e = h.last<EmptyHoldEvent>();
+      expect((e.u, e.mouseMode), (300, true));
+      expect(h.machine.isIdle, isTrue);
+    });
+
     test('tap on a block selects it', () {
       final h = Harness(spans: [const ClockSpan('a', 600, 660)]);
       h.machine.down(h.at(630));

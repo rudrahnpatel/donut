@@ -6,7 +6,7 @@ All touch/mouse input on the dial goes through a pure-Dart state machine
 (`lib/features/clock/clock_gesture_machine.dart`) fed by a custom recognizer
 (`clock_recognizer.dart`). Every drag draws a new entry (overlaps allowed); only the selected
 entry can be moved (drag its body) or resized (drag a handle). Hold an entry for the marking
-menu. The hub is a navigation control on both dials: tap = zoom in/out, hold = hour picker,
+menu, or an empty spot for the pin menu (see pins.md). The hub is a navigation control on both dials: tap = zoom in/out, hold = hour picker,
 horizontal flick = next/previous hour (hour dial) or day (day dial). A second finger turns
 the gesture into a pinch (zoom). See also overlaps_colours_and_auto_drafts.md.
 
@@ -20,6 +20,7 @@ stateDiagram-v2
   idle --> pressedHandle: down on selected block's end
   idle --> pressedHub: down on hub
   pressedEmpty --> creating: move > slop
+  pressedEmpty --> menu: hold 300 ms (pin menu, EmptyHoldEvent)
   pressedEmpty --> idle: up / TapEmpty
   pressedBlock --> creating: move > slop (unselected)
   pressedBlock --> moving: move > slop (selected)
