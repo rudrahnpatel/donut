@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +21,8 @@ class Reminder {
     required this.atMin,
     required this.title,
     required this.body,
+    this.untilMin,
+    this.alert = true,
   });
 
   final int id;
@@ -27,24 +30,42 @@ class Reminder {
   final String title;
   final String body;
 
+  /// For an entry under way: the minute it ends. On Android the
+  /// notification then stays up counting down to it (the system ticks the
+  /// timer) and goes away at the end.
+  final int? untilMin;
+
+  /// Sound and heads-up; off for a countdown that follows a heads-up.
+  final bool alert;
+
+  bool get isLive => untilMin != null;
+
   @override
   bool operator ==(Object other) =>
       other is Reminder &&
       other.id == id &&
       other.atMin == atMin &&
       other.title == title &&
-      other.body == body;
+      other.body == body &&
+      other.untilMin == untilMin &&
+      other.alert == alert;
 
   @override
-  int get hashCode => Object.hash(id, atMin, title, body);
+  int get hashCode => Object.hash(id, atMin, title, body, untilMin, alert);
 }
 
 /// How early a pin ("Reach by 4:55") notifies, whatever the entries' lead.
 const pinLeadMin = 10;
 
-/// Reminders for saved entries starting after [nowMin] and within
-/// [horizonMin] minutes, [leadMin] minutes early, and for [pins],
-/// [pinLeadMin] minutes early. Drafts never remind.
+/// Reminders for saved entries and [pins] within [horizonMin] minutes of
+/// [nowMin]. Drafts never remind.
+///
+/// - [leadMin] > 0: a heads-up that many minutes before an entry starts.
+/// - At the start, a live countdown to the entry's end (the reminder
+///   itself when there is no lead; silent after a heads-up). It shares the
+///   heads-up's id, so it takes its place. An entry already under way gets
+///   its countdown right away, silently.
+/// - Pins: a heads-up [pinLeadMin] minutes early.
 List<Reminder> planReminders(
   Iterable<PlanBlock> saved,
   Map<String, ActivityRow> activities, {
@@ -55,22 +76,51 @@ List<Reminder> planReminders(
   int horizonMin = 48 * 60,
 }) {
   final out = <Reminder>[];
+  final livePins = [
+    for (final p in pins)
+      if (!p.draft && !p.deleted) p,
+  ]..sort((a, b) => a.atMin.compareTo(b.atMin));
+  String clock(int abs) => formatClock(minuteOfDay(abs), use24h: use24h);
   for (final b in saved) {
     if (b.status != BlockStatus.saved) continue;
-    final at = b.startMin - leadMin;
-    if (at <= nowMin || at > nowMin + horizonMin) continue;
+    if (b.endMin <= nowMin || b.startMin > nowMin + horizonMin) continue;
     final activity = activities[b.activityId];
     final name = b.titleWith(activity?.name);
     final emoji = activity == null ? '' : '${activity.emoji} ';
-    final times =
-        '${formatClock(minuteOfDay(b.startMin), use24h: use24h)} – '
-        '${formatClock(minuteOfDay(b.endMin), use24h: use24h)}';
+    final title = name == null ? '${emoji}Up next' : '$emoji$name';
+    final id = _stableId(b.id);
+    final started = b.startMin <= nowMin;
+    final headsUp = b.startMin - leadMin;
+    if (leadMin > 0 && headsUp > nowMin) {
+      out.add(
+        Reminder(
+          id: id,
+          atMin: headsUp,
+          title: title,
+          body: '${clock(b.startMin)} – ${clock(b.endMin)} · in $leadMin min',
+        ),
+      );
+    }
+    // The next pin while it runs or soon after ("Reach by 4:55 PM").
+    final pin = livePins
+        .where(
+          (p) =>
+              p.atMin > math.max(b.startMin, nowMin) &&
+              p.atMin <= b.endMin + 60,
+        )
+        .firstOrNull;
     out.add(
       Reminder(
-        id: _stableId(b.id),
-        atMin: at,
-        title: name == null ? '${emoji}Up next' : '$emoji$name',
-        body: leadMin == 0 ? times : '$times · in $leadMin min',
+        id: id,
+        atMin: started ? nowMin : b.startMin,
+        title: title,
+        body: [
+          'Ends ${clock(b.endMin)}',
+          if (pin != null)
+            '${pin.pinKind.glyph} ${pin.describe(use24h: use24h)}',
+        ].join(' · '),
+        untilMin: b.endMin,
+        alert: leadMin == 0 && !started,
       ),
     );
   }
@@ -121,6 +171,36 @@ class ReminderService {
     ),
     linux: LinuxNotificationDetails(),
   );
+
+  /// Ids of countdowns this run has put up, so ones whose entry went away
+  /// can be taken down.
+  final _shownLive = <int>{};
+
+  /// A countdown: stays up, the system ticks the time left, and it goes
+  /// away when the entry ends. [from] is when it appears.
+  NotificationDetails _liveDetails(Reminder r, int from) {
+    final ends = localDateTimeOf(r.untilMin!);
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        r.alert ? 'entries' : 'now',
+        r.alert ? 'Entry reminders' : 'Happening now',
+        channelDescription: r.alert
+            ? 'A nudge when a saved entry starts'
+            : 'The entry under way, counting down to its end',
+        importance: r.alert ? Importance.high : Importance.low,
+        priority: r.alert ? Priority.high : Priority.low,
+        icon: 'ic_stat_donut',
+        ongoing: true,
+        onlyAlertOnce: true,
+        usesChronometer: true,
+        chronometerCountDown: true,
+        when: ends.millisecondsSinceEpoch,
+        timeoutAfter: math.max(1, r.untilMin! - from) * 60000,
+        category: AndroidNotificationCategory.progress,
+      ),
+      linux: const LinuxNotificationDetails(),
+    );
+  }
 
   bool get _android => !kIsWeb && Platform.isAndroid;
 
@@ -180,7 +260,9 @@ class ReminderService {
         .invokeMethod<void>('openNotificationSettings');
   }
 
-  /// Replaces every scheduled reminder with [reminders].
+  /// Replaces every scheduled reminder with [reminders]. Notifications
+  /// already showing stay; a countdown under way is refreshed in place, and
+  /// one whose entry is gone is taken down.
   Future<void> apply(List<Reminder> reminders) async {
     if (!_ready) return;
     final now = nowAbsMinute();
@@ -189,13 +271,31 @@ class ReminderService {
         if (r.atMin > now) r,
     ];
     if (!_android) return;
-    await _plugin.cancelAll();
+    await _plugin.cancelAllPendingNotifications();
+    final running = [
+      for (final r in reminders)
+        if (r.isLive && r.atMin <= now && r.untilMin! > now) r,
+    ];
+    for (final id in _shownLive.difference({for (final r in running) r.id})) {
+      await _plugin.cancel(id: id);
+    }
+    _shownLive
+      ..clear()
+      ..addAll(running.map((r) => r.id));
+    for (final r in running) {
+      await _plugin.show(
+        id: r.id,
+        title: r.title,
+        body: r.body,
+        notificationDetails: _liveDetails(r, now),
+      );
+    }
     for (final r in _pending) {
       try {
         await _plugin.zonedSchedule(
           id: r.id,
           scheduledDate: tz.TZDateTime.from(localDateTimeOf(r.atMin), tz.local),
-          notificationDetails: _details,
+          notificationDetails: r.isLive ? _liveDetails(r, r.atMin) : _details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           title: r.title,
           body: r.body,

@@ -46,7 +46,10 @@ void main() {
     );
     expect(r.map((x) => x.atMin), [at(15, 5), at(15, 15)]);
     expect(r.first.title, '🚆 home to stn');
-    expect(r.first.body, '3:05 PM – 3:15 PM');
+    // With no lead, the start's reminder is the live countdown, with sound.
+    expect(r.first.body, 'Ends 3:15 PM');
+    expect(r.first.untilMin, at(15, 15));
+    expect(r.first.alert, isTrue);
     expect(r[1].title, 'Up next');
   });
 
@@ -92,5 +95,44 @@ void main() {
     expect(r.single.atMin, at(16, 45));
     expect(r.single.title, '🏁 Reach by 4:55 PM');
     expect(r.single.body, 'In 10 min');
+  });
+
+  test('after a heads-up, the countdown takes its place quietly', () {
+    final r = planReminders(blocks, const {}, nowMin: at(14, 50), leadMin: 10);
+    final home = r.where((x) => x.title.contains('home to stn')).toList();
+    expect(home.map((x) => x.atMin), [at(14, 55), at(15, 5)]);
+    expect(home[0].isLive, isFalse);
+    expect(home[0].alert, isTrue);
+    expect(home[1].untilMin, at(15, 15));
+    expect(home[1].alert, isFalse);
+    expect(home[0].id, home[1].id, reason: 'replaces the heads-up');
+  });
+
+  test('an entry already under way counts down from now, silently', () {
+    final r = planReminders(blocks, const {}, nowMin: at(14, 10), leadMin: 0);
+    final running = r.firstWhere((x) => x.untilMin == at(14, 30));
+    expect(running.atMin, at(14, 10));
+    expect(running.alert, isFalse);
+  });
+
+  test('the countdown names the next pin', () {
+    final r = planReminders(
+      [PlanBlock(id: 'train', startMin: at(16, 15), durMin: 40, note: 'train')],
+      const {},
+      pins: [
+        PinRow(
+          id: 'p',
+          atMin: at(16, 55),
+          kind: 'reachBy',
+          draft: false,
+          hlc: 'x',
+          deleted: false,
+        ),
+      ],
+      nowMin: at(16, 0),
+      leadMin: 0,
+    );
+    final live = r.firstWhere((x) => x.isLive);
+    expect(live.body, 'Ends 4:55 PM · 🏁 Reach by 4:55 PM');
   });
 }

@@ -7,6 +7,15 @@ Reminders, lead time). Sketches in plan mode never remind. Android schedules the
 system so they fire while the app is closed. Linux (and later Windows) fires them from
 inside the running app.
 
+**Live countdown (Android).** When an entry starts, its notification stays up with a timer
+counting down to the entry's end, ticked by the system rather than the app, and goes away
+at the end. "Ends 4:55 PM · 🏁 Reach by 4:55 PM" names the next pin.
+- With a heads-up time set, the countdown replaces the heads-up silently (same id).
+- With "At start" it *is* the reminder, with sound.
+- An entry already under way when the app opens gets its countdown at once, silently.
+
+On Linux the start reminder is an ordinary notification ("Ends 4:55 PM").
+
 ## How
 
 - `lib/features/reminders/reminder_service.dart`:
@@ -50,6 +59,15 @@ flowchart LR
 - The 48 h horizon fits Android's alarm limits. If the app isn't opened for two days,
   reminders run out. This is acceptable for a planner you open daily; the widget update
   doesn't re-arm them.
+- **Countdown through the plugin, not native code.** `zonedSchedule` with `ongoing`,
+  `usesChronometer` + `chronometerCountDown`, `when` = the end and `timeoutAfter` gives a
+  ticking countdown with the app closed, and it survives reboots via the plugin's boot
+  receiver. Android 16's status-bar chip ("Live Updates") needs `setRequestPromotedOngoing`,
+  which the plugin can't set; it would mean native scheduling, so it's left for later.
+- **`apply` cancels only pending notifications** (`cancelAllPendingNotifications`), not
+  `cancelAll`. Otherwise every plan change took down a countdown already on screen.
+  Countdowns this run has shown are tracked in `_shownLive`, so one whose entry was
+  deleted or moved is cancelled.
 - Linux has no system scheduler that `flutter_local_notifications` can use, so the app does
   it. The original plan had close-to-tray (`tray_manager`) to keep it running; that is not
   built yet, so Linux reminders fire only while the window is open.
