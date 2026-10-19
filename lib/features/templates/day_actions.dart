@@ -7,8 +7,15 @@ import '../../data/repos/block_repo.dart';
 import '../../data/repos/plan_tools_repo.dart';
 import '../day/pickers.dart';
 import '../day/running_late.dart';
+import 'chains.dart';
 
-enum _DayAction { runningLate, copyYesterday, applyTemplate, saveTemplate }
+enum _DayAction {
+  runningLate,
+  addChain,
+  copyYesterday,
+  applyTemplate,
+  saveTemplate,
+}
 
 /// Overflow menu on the day header: templates and "copy yesterday".
 class DayMenuButton extends ConsumerWidget {
@@ -35,6 +42,29 @@ class DayMenuButton extends ConsumerWidget {
         switch (a) {
           case _DayAction.runningLate:
             await runLate(context, ref);
+          case _DayAction.addChain:
+            final chain = await pickChain(context, ref, title: 'Add a chain');
+            if (chain == null || !context.mounted) return;
+            // Starts now on today (rounded up to 5 min), 9 AM other days.
+            final now = nowAbsMinute();
+            final suggested = day == ref.read(todayProvider)
+                ? (now + 4) ~/ 5 * 5 - day.startMin
+                : 9 * 60;
+            final time = await showTimePicker(
+              context: context,
+              helpText: 'Start ${chain.name} at',
+              initialTime: TimeOfDay(
+                hour: suggested ~/ 60 % 24,
+                minute: suggested % 60,
+              ),
+            );
+            if (time == null || !context.mounted) return;
+            await placeChain(
+              context,
+              ref,
+              chain,
+              day.startMin + time.hour * 60 + time.minute,
+            );
           case _DayAction.copyYesterday:
             snack(added(await tools.copyFrom(day.addDays(-1), day)));
           case _DayAction.applyTemplate:
@@ -81,6 +111,13 @@ class DayMenuButton extends ConsumerWidget {
               title: Text('Running late…'),
             ),
           ),
+        const PopupMenuItem(
+          value: _DayAction.addChain,
+          child: ListTile(
+            leading: Icon(Icons.link_rounded),
+            title: Text('Add a chain…'),
+          ),
+        ),
         const PopupMenuItem(
           value: _DayAction.copyYesterday,
           child: ListTile(

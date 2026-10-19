@@ -3909,6 +3909,358 @@ class PinsCompanion extends UpdateCompanion<PinRow> {
   }
 }
 
+class $ChainsTable extends Chains with TableInfo<$ChainsTable, ChainRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ChainsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stepsJsonMeta = const VerificationMeta(
+    'stepsJson',
+  );
+  @override
+  late final GeneratedColumn<String> stepsJson = GeneratedColumn<String>(
+    'steps_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, stepsJson, hlc, deleted];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'chains';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ChainRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('steps_json')) {
+      context.handle(
+        _stepsJsonMeta,
+        stepsJson.isAcceptableOrUnknown(data['steps_json']!, _stepsJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stepsJsonMeta);
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(
+        _hlcMeta,
+        hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hlcMeta);
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ChainRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ChainRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      stepsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}steps_json'],
+      )!,
+      hlc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hlc'],
+      )!,
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
+    );
+  }
+
+  @override
+  $ChainsTable createAlias(String alias) {
+    return $ChainsTable(attachedDatabase, alias);
+  }
+}
+
+class ChainRow extends DataClass implements Insertable<ChainRow> {
+  final String id;
+  final String name;
+  final String stepsJson;
+  final String hlc;
+  final bool deleted;
+  const ChainRow({
+    required this.id,
+    required this.name,
+    required this.stepsJson,
+    required this.hlc,
+    required this.deleted,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['steps_json'] = Variable<String>(stepsJson);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    return map;
+  }
+
+  ChainsCompanion toCompanion(bool nullToAbsent) {
+    return ChainsCompanion(
+      id: Value(id),
+      name: Value(name),
+      stepsJson: Value(stepsJson),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+    );
+  }
+
+  factory ChainRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ChainRow(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      stepsJson: serializer.fromJson<String>(json['stepsJson']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'stepsJson': serializer.toJson<String>(stepsJson),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+    };
+  }
+
+  ChainRow copyWith({
+    String? id,
+    String? name,
+    String? stepsJson,
+    String? hlc,
+    bool? deleted,
+  }) => ChainRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    stepsJson: stepsJson ?? this.stepsJson,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+  );
+  ChainRow copyWithCompanion(ChainsCompanion data) {
+    return ChainRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      stepsJson: data.stepsJson.present ? data.stepsJson.value : this.stepsJson,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChainRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('stepsJson: $stepsJson, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, stepsJson, hlc, deleted);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ChainRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.stepsJson == this.stepsJson &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted);
+}
+
+class ChainsCompanion extends UpdateCompanion<ChainRow> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> stepsJson;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<int> rowid;
+  const ChainsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.stepsJson = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ChainsCompanion.insert({
+    required String id,
+    required String name,
+    required String stepsJson,
+    required String hlc,
+    this.deleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       stepsJson = Value(stepsJson),
+       hlc = Value(hlc);
+  static Insertable<ChainRow> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? stepsJson,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (stepsJson != null) 'steps_json': stepsJson,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ChainsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? stepsJson,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<int>? rowid,
+  }) {
+    return ChainsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      stepsJson: stepsJson ?? this.stepsJson,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (stepsJson.present) {
+      map['steps_json'] = Variable<String>(stepsJson.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChainsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('stepsJson: $stepsJson, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RemoteLinksTable extends RemoteLinks
     with TableInfo<$RemoteLinksTable, RemoteLinkRow> {
   @override
@@ -4693,6 +5045,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TemplatesTable templates = $TemplatesTable(this);
   late final $SeriesTable series = $SeriesTable(this);
   late final $PinsTable pins = $PinsTable(this);
+  late final $ChainsTable chains = $ChainsTable(this);
   late final $RemoteLinksTable remoteLinks = $RemoteLinksTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $LocalKvTable localKv = $LocalKvTable(this);
@@ -4708,6 +5061,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     templates,
     series,
     pins,
+    chains,
     remoteLinks,
     settings,
     localKv,
@@ -6681,6 +7035,207 @@ typedef $$PinsTableProcessedTableManager =
       PinRow,
       PrefetchHooks Function()
     >;
+typedef $$ChainsTableCreateCompanionBuilder = ChainsCompanion Function({
+  required String id,
+  required String name,
+  required String stepsJson,
+  required String hlc,
+  Value<bool> deleted,
+  Value<int> rowid,
+});
+typedef $$ChainsTableUpdateCompanionBuilder = ChainsCompanion Function({
+  Value<String> id,
+  Value<String> name,
+  Value<String> stepsJson,
+  Value<String> hlc,
+  Value<bool> deleted,
+  Value<int> rowid,
+});
+
+class $$ChainsTableFilterComposer
+    extends Composer<_$AppDatabase, $ChainsTable> {
+  $$ChainsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stepsJson => $composableBuilder(
+    column: $table.stepsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ChainsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChainsTable> {
+  $$ChainsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stepsJson => $composableBuilder(
+    column: $table.stepsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ChainsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChainsTable> {
+  $$ChainsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get stepsJson =>
+      $composableBuilder(column: $table.stepsJson, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+}
+
+class $$ChainsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ChainsTable,
+          ChainRow,
+          $$ChainsTableFilterComposer,
+          $$ChainsTableOrderingComposer,
+          $$ChainsTableAnnotationComposer,
+          $$ChainsTableCreateCompanionBuilder,
+          $$ChainsTableUpdateCompanionBuilder,
+          (ChainRow, BaseReferences<_$AppDatabase, $ChainsTable, ChainRow>),
+          ChainRow,
+          PrefetchHooks Function()
+        > {
+  $$ChainsTableTableManager(_$AppDatabase db, $ChainsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ChainsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ChainsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ChainsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> stepsJson = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ChainsCompanion(
+                id: id,
+                name: name,
+                stepsJson: stepsJson,
+                hlc: hlc,
+                deleted: deleted,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String stepsJson,
+                required String hlc,
+                Value<bool> deleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ChainsCompanion.insert(
+                id: id,
+                name: name,
+                stepsJson: stepsJson,
+                hlc: hlc,
+                deleted: deleted,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ChainsTable, ChainRow>(table),
+                  BaseReferences<_$AppDatabase, $ChainsTable, ChainRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ChainsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ChainsTable,
+      ChainRow,
+      $$ChainsTableFilterComposer,
+      $$ChainsTableOrderingComposer,
+      $$ChainsTableAnnotationComposer,
+      $$ChainsTableCreateCompanionBuilder,
+      $$ChainsTableUpdateCompanionBuilder,
+      (ChainRow, BaseReferences<_$AppDatabase, $ChainsTable, ChainRow>),
+      ChainRow,
+      PrefetchHooks Function()
+    >;
 typedef $$RemoteLinksTableCreateCompanionBuilder =
     RemoteLinksCompanion Function({
       required String blockId,
@@ -7191,6 +7746,8 @@ class $AppDatabaseManager {
   $$SeriesTableTableManager get series =>
       $$SeriesTableTableManager(_db, _db.series);
   $$PinsTableTableManager get pins => $$PinsTableTableManager(_db, _db.pins);
+  $$ChainsTableTableManager get chains =>
+      $$ChainsTableTableManager(_db, _db.chains);
   $$RemoteLinksTableTableManager get remoteLinks =>
       $$RemoteLinksTableTableManager(_db, _db.remoteLinks);
   $$SettingsTableTableManager get settings =>

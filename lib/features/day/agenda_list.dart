@@ -8,9 +8,9 @@ import '../../data/db/app_database.dart';
 import '../../data/repos/block_repo.dart';
 import '../../data/repos/pin_repo.dart';
 
-enum AgendaAction { editTime, activity, label, repeat, delete }
+enum AgendaAction { editTime, activity, label, repeat, saveChain, delete }
 
-enum PinAction { editTime, delete }
+enum PinAction { fitBefore, startHere, editTime, delete }
 
 /// The day's entries as a list: precise edits, plus the keyboard and screen
 /// reader path to everything the dial gestures do. Swipe an entry left to
@@ -171,6 +171,14 @@ class _PinTile extends StatelessWidget {
               tooltip: 'Pin actions',
               onSelected: onAction,
               itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: PinAction.fitBefore,
+                  child: Text('Fit a chain before…'),
+                ),
+                PopupMenuItem(
+                  value: PinAction.startHere,
+                  child: Text('Start a chain here…'),
+                ),
                 PopupMenuItem(
                   value: PinAction.editTime,
                   child: Text('Edit time'),
@@ -339,6 +347,10 @@ class _AgendaTile extends StatelessWidget {
                   PopupMenuItem(
                     value: AgendaAction.repeat,
                     child: Text('Repeat…'),
+                  ),
+                  PopupMenuItem(
+                    value: AgendaAction.saveChain,
+                    child: Text('Save as chain…'),
                   ),
                   PopupMenuItem(
                     value: AgendaAction.delete,

@@ -40,6 +40,10 @@ final templatesProvider = StreamProvider<List<TemplateRow>>(
   (ref) => ref.watch(planToolsRepoProvider).watchTemplates(),
 );
 
+final chainsProvider = StreamProvider<List<ChainRow>>(
+  (ref) => ref.watch(planToolsRepoProvider).watchChains(),
+);
+
 final seriesProvider = StreamProvider<List<SeriesRow>>(
   (ref) => ref.watch(planToolsRepoProvider).watchSeries(),
 );

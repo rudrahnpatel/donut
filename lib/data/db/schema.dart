@@ -102,6 +102,22 @@ class Templates extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// A reusable sequence of steps ("Commute": get ready 5 → walk 5 → train
+/// 40) with no times of its own; it is laid out when used, from a start or
+/// back from a pin. [stepsJson] holds `[{d, n?, a?, e?, c?}]`: duration,
+/// label, activity, emoji, colour.
+@DataClassName('ChainRow')
+class Chains extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get stepsJson => text()();
+  TextColumn get hlc => text()();
+  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// A recurring block. Instances are generated as ordinary [Blocks] rows with
 /// deterministic ids (UUIDv5 of series id + day) a fixed window ahead.
 @DataClassName('SeriesRow')

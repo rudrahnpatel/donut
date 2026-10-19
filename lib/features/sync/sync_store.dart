@@ -34,6 +34,9 @@ class SyncStore {
       )..where((t) => t.draft.equals(false))).get())
         r.id: r.toJson(),
     },
+    'chains': {
+      for (final r in await _db.select(_db.chains).get()) r.id: r.toJson(),
+    },
     'settings': {
       for (final r in await _db.select(_db.settings).get())
         if (!deviceSettings.contains(r.key)) r.key: r.toJson(),
@@ -73,6 +76,10 @@ class SyncStore {
               await _db
                   .into(_db.pins)
                   .insertOnConflictUpdate(PinRow.fromJson(json));
+            case 'chains':
+              await _db
+                  .into(_db.chains)
+                  .insertOnConflictUpdate(ChainRow.fromJson(json));
             case 'settings':
               await _db
                   .into(_db.settings)

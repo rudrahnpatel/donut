@@ -41,6 +41,49 @@ class TemplateBlock {
   };
 }
 
+/// One step of a chain: a duration and what fills it.
+class ChainStep {
+  const ChainStep(
+    this.dur, {
+    this.note,
+    this.activityId,
+    this.emoji,
+    this.color,
+  });
+
+  factory ChainStep.fromJson(Map<String, dynamic> j) => ChainStep(
+    j['d'] as int,
+    note: j['n'] as String?,
+    activityId: j['a'] as String?,
+    emoji: j['e'] as String?,
+    color: j['c'] as int?,
+  );
+
+  final int dur;
+  final String? note;
+  final String? activityId;
+  final String? emoji;
+  final int? color;
+
+  Map<String, Object?> toJson() => {
+    'd': dur,
+    if (note != null) 'n': note,
+    if (activityId != null) 'a': activityId,
+    if (emoji != null) 'e': emoji,
+    if (color != null) 'c': color,
+  };
+}
+
+extension ChainSteps on ChainRow {
+  List<ChainStep> get steps => [
+    for (final j in jsonDecode(stepsJson) as List)
+      ChainStep.fromJson(j as Map<String, dynamic>),
+  ];
+
+  /// Minutes from the first step's start to the last step's end.
+  int get length => steps.fold(0, (sum, s) => sum + s.dur);
+}
+
 /// Recurrence rule: `daily` or `weekly:1,3,5` (ISO weekdays).
 class RepeatRule {
   const RepeatRule.daily() : weekdays = const {1, 2, 3, 4, 5, 6, 7};
@@ -174,6 +217,50 @@ class PlanToolsRepo {
       added++;
     }
     return added;
+  }
+
+  // ── chains ─────────────────────────────────────────────────────────────
+
+  Stream<List<ChainRow>> watchChains() =>
+      (_db.select(_db.chains)
+            ..where((t) => t.deleted.equals(false))
+            ..orderBy([(t) => OrderingTerm.asc(t.name)]))
+          .watch();
+
+  Future<void> saveChain(String name, List<ChainStep> steps) => _db
+      .into(_db.chains)
+      .insert(
+        ChainsCompanion.insert(
+          id: _uuid.v4(),
+          name: name,
+          stepsJson: jsonEncode([for (final s in steps) s.toJson()]),
+          hlc: _clock.now(),
+        ),
+      );
+
+  Future<void> deleteChain(String id) =>
+      (_db.update(_db.chains)..where((t) => t.id.equals(id))).write(
+        ChainsCompanion(deleted: const Value(true), hlc: Value(_clock.now())),
+      );
+
+  /// Lays [chain]'s steps back to back from absolute minute [startMin] as
+  /// plan-mode sketches, so they can be reviewed and kept with ✓ like a
+  /// template. Overlaps are allowed. Returns how many were added.
+  Future<int> applyChain(ChainRow chain, int startMin) async {
+    var at = startMin;
+    final steps = chain.steps;
+    for (final s in steps) {
+      await _blocks.create(
+        at,
+        at + s.dur,
+        emoji: s.emoji,
+        activityId: s.activityId,
+        note: s.note,
+        color: s.color,
+      );
+      at += s.dur;
+    }
+    return steps.length;
   }
 
   // ── series ─────────────────────────────────────────────────────────────

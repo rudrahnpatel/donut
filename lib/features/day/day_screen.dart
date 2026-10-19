@@ -10,12 +10,14 @@ import '../../core/time/day_minutes.dart';
 import '../../data/db/app_database.dart';
 import '../../data/repos/block_repo.dart';
 import '../../data/repos/pin_repo.dart';
+import '../../data/repos/plan_tools_repo.dart';
 import '../../data/repos/settings_repo.dart';
 import '../clock/clock_painter.dart';
 import '../clock/clock_view.dart';
 import '../clock/spiral_math.dart';
 import '../radial_menu/marking_menu_controller.dart';
 import '../sync/sync_controller.dart';
+import '../templates/chains.dart';
 import '../templates/day_actions.dart';
 import '../reminders/reminder_providers.dart';
 import 'plan_mode.dart';
@@ -476,14 +478,37 @@ class _DayPageState extends ConsumerState<DayPage> {
         await _askLabel(b.id);
       case AgendaAction.repeat:
         if (mounted) await showRepeatSheet(context, ref, b);
+      case AgendaAction.saveChain:
+        final plan = ref.read(dayPlanProvider(day)).value;
+        if (plan != null && mounted) {
+          await saveChainFrom(context, ref, b, plan.blocks);
+        }
       case AgendaAction.delete:
         await _delete(b.id);
     }
   }
 
+  bool get _use24h => ref.read(settingsProvider).use24h;
+
   Future<void> _onPinAction(PinRow p, PinAction a) async {
     final repo = ref.read(pinRepoProvider);
     switch (a) {
+      case PinAction.fitBefore || PinAction.startHere:
+        final before = a == PinAction.fitBefore;
+        final chain = await pickChain(
+          context,
+          ref,
+          title: before
+              ? 'Fit a chain before ${p.describe(use24h: _use24h)}'
+              : 'Start a chain at ${formatClock(minuteOfDay(p.atMin), use24h: _use24h)}',
+        );
+        if (chain == null || !mounted) return;
+        await placeChain(
+          context,
+          ref,
+          chain,
+          before ? p.atMin - chain.length : p.atMin,
+        );
       case PinAction.editTime:
         final minute = minuteOfDay(p.atMin);
         final t = await showTimePicker(
