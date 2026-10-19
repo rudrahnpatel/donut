@@ -8,10 +8,11 @@ Feedback from testing on a phone-sized screen:
   an existing entry. Moving and resizing only apply to the *selected* entry, so tap first.
 - **New entries aren't auto-selected.** That way the next drag can't grab the previous
   entry's handle by accident.
-- **Overlaps are allowed.** Where entries overlap, the ring is split radially between them
-  (halves for two, thirds for three); where an entry is alone it uses the full width. Each
-  entry is still drawn as **one continuous outline** that steps in to its sub-lane over the
-  overlap (`ClockPainter._runPath`), not as separate pieces with gaps.
+- **Overlaps are allowed.** Entries that overlap share the ring's width in columns, like
+  clashing events in a calendar. While it overlaps others an entry keeps **one column**
+  (widened into neighbouring columns that are free for its whole length); wherever it is
+  alone it uses the full width. Each entry is drawn as one continuous outline
+  (`ClockPainter._runPath`).
 - **Each entry gets its own colour** from `entryPalette`, chosen to differ from the entries
   it touches or overlaps. Older entries without a stored colour get a stable hash colour.
 - **Edits save instantly** outside plan mode; plan mode (pen icon) turns them into sketches
@@ -24,9 +25,14 @@ Feedback from testing on a phone-sized screen:
 ## How
 
 - `lib/features/clock/overlap_layout.dart`:
-  - `splitOverlaps(spans)` cuts at every start and end and gives each slice's blocks
-    consecutive sub-lanes in a stable order (earlier start, then longer, then id).
-  - `pieceAt(pieces, u, fraction)` hit-tests by minute *and* radial position.
+  - `splitOverlaps(spans)` groups chained overlaps into clusters. Each block takes the
+    first column free at its start (earlier start, then longer, then id), and `span` widens
+    it over the next columns while none of their blocks overlaps it. The cluster's column
+    count is its peak concurrency.
+  - Each block's pieces are its shared stretches (that column) and its alone stretches
+    (`0+1/1`, full width).
+  - `pieceAt(pieces, u, fraction)` hit-tests by minute *and* radial position (within
+    `index..index+span`).
   - The painter and the gesture machine both use it, so a press on the outer half of an
     overlap picks the entry drawn there.
 - `clock_gesture_machine.dart`:
@@ -54,7 +60,15 @@ flowchart LR
 - Same-colour back-to-back entries (all unlabelled, or all the same task) were unreadable.
   So the entry's own colour wins over its activity's.
 - Overlaps split radially rather than stacking or blocking, so both entries stay visible
-  and tappable. Splitting only the overlapping part keeps the rest of each entry at full width.
+  and tappable.
+- **First version:** each time slice re-split its active entries evenly, which moved an
+  entry's sub-lane whenever the overlaps around it changed. On the phone, red and purple
+  sketches zig-zagged across three positions ("keep connected splits connected").
+- **Pure calendar columns** fixed that but made a long entry chained to many overlaps a
+  thin line along its whole length ("hard to manage").
+- **The hybrid:** a fixed column while sharing, full width while alone. The only steps
+  left are between alone and shared, on one side of the band.
+- **The remaining limit:** N entries overlapping at once each get 1/N of the ring.
 
 ## Recolouring older entries
 

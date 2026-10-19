@@ -350,12 +350,14 @@ class ClockPainter extends CustomPainter {
         final onLane = arc.lane.isOverflow;
         final count = onLane ? 1 : lp.count;
         final index = onLane ? 0 : lp.index;
+        final span = onLane ? 1 : lp.span;
         final (lr0, lr1) = _radii(g, arc.lane);
         final w = (lr1 - lr0) / count;
         // Ring edges keep a 2.5 px margin; an edge shared with another
-        // block's sub-lane gives up half of the gap between them.
+        // block's column gives up half of the gap between them.
         final r0 = lr0 + w * index + (index == 0 ? 2.5 : 1.2);
-        final r1 = lr0 + w * (index + 1) - (index == count - 1 ? 2.5 : 1.2);
+        final r1 =
+            lr0 + w * (index + span) - (index + span == count ? 2.5 : 1.2);
         segs.add(
           _Seg(
             arc.lane,
@@ -481,8 +483,8 @@ class ClockPainter extends CustomPainter {
       )) {
         if (arc.lane.isOverflow) continue;
         final (lr0, lr1) = _radii(g, arc.lane);
-        final w = (lr1 - lr0) / piece.count;
-        final r = lr0 + w * (piece.index + 0.5);
+        final w = (lr1 - lr0) / piece.count * piece.span;
+        final r = lr0 + (lr1 - lr0) / piece.count * piece.index + w / 2;
         final size = math.min(w * 0.62, (lr1 - lr0) * 0.52);
         final room = arc.sweep * r;
         if (best == null || room > best.room) {
