@@ -14,6 +14,7 @@ import '../core/time/day_minutes.dart';
 import '../core/time/hlc.dart';
 import '../data/db/app_database.dart';
 import '../data/repos/settings_repo.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/clock/clock_geometry.dart';
 import '../features/clock/clock_painter.dart';
 import '../features/day/dial_mode.dart';
@@ -45,6 +46,10 @@ class DevHarness {
 
   AppDatabase openDatabase() => AppDatabase(NativeDatabase.memory());
 
+  /// `DONUT_ONBOARD=<step>` starts on the welcome tour, at that step (0 is
+  /// the hello).
+  bool get showsOnboarding => env['DONUT_ONBOARD'] != null;
+
   Widget wrap(Widget app) => RepaintBoundary(key: _boundary, child: app);
 
   List<Override> get overrides {
@@ -58,7 +63,12 @@ class DevHarness {
     } else {
       mode = const DialMode.live();
     }
-    return [dialModeProvider.overrideWith(() => DialModeNotifier(mode))];
+    return [
+      dialModeProvider.overrideWith(() => DialModeNotifier(mode)),
+      onboardingFirstStepProvider.overrideWithValue(
+        int.tryParse(env['DONUT_ONBOARD'] ?? '') ?? 0,
+      ),
+    ];
   }
 
   Future<void> seed(AppDatabase db, HlcClock clock) async {

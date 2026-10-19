@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../data/repos/settings_repo.dart';
 import '../features/day/plan_mode.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import 'providers.dart';
 import 'shell.dart';
 import 'theme/theme.dart';
@@ -60,9 +61,27 @@ class DonutApp extends ConsumerWidget {
           builder: (context, child) =>
               // ignore: deprecated_member_use
               MaterialUiCompatibilityBridge(child: child!),
-          home: const AppShell(),
+          home: const _Home(),
         );
       },
+    );
+  }
+}
+
+/// The welcome tour on a device's first run, then the app.
+class _Home extends ConsumerWidget {
+  const _Home();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final onboarded = ref.watch(onboardedProvider);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 450),
+      child: onboarded
+          ? const AppShell()
+          : OnboardingScreen(
+              onDone: () => ref.read(onboardedProvider.notifier).finish(),
+            ),
     );
   }
 }

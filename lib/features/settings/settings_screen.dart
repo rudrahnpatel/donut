@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/providers.dart';
 import '../../data/repos/settings_repo.dart';
+import '../onboarding/onboarding_screen.dart';
 import '../reminders/reminder_providers.dart';
 import '../sync/sync_settings_section.dart';
 
@@ -222,6 +223,19 @@ class SettingsScreen extends ConsumerWidget {
                   leading: Text('🍩', style: TextStyle(fontSize: 28)),
                   title: Text('Donut'),
                   subtitle: Text('Plan your day on a clock.'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.school_rounded),
+                  title: const Text('Replay the tour'),
+                  subtitle: const Text('Sprinkles shows you around again'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      fullscreenDialog: true,
+                      builder: (route) => OnboardingScreen(
+                        onDone: () => Navigator.of(route).pop(),
+                      ),
+                    ),
+                  ),
                 ),
                 ListTile(
                   title: const Text('Licences'),

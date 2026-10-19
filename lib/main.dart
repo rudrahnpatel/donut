@@ -9,6 +9,7 @@ import 'data/db/app_database.dart';
 import 'data/repos/block_repo.dart';
 import 'data/repos/library_repo.dart';
 import 'dev/dev_harness.dart';
+import 'features/onboarding/onboarding_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,7 @@ Future<void> main() async {
   final h = newest.read<String?>('h');
   if (h != null) clock.receive(h);
 
+  final onboarded = await db.getLocal(OnboardedNotifier.key) != null;
   await LibraryRepo(db, clock).seedIfEmpty();
   await BlockRepo(db, clock).assignMissingColors();
   await dev?.seed(db, clock);
@@ -41,6 +43,10 @@ Future<void> main() async {
       overrides: [
         databaseProvider.overrideWithValue(db),
         hlcClockProvider.overrideWithValue(clock),
+        // The harness skips the tour unless asked to show it.
+        onboardedAtStartProvider.overrideWithValue(
+          dev == null ? onboarded : !dev.showsOnboarding,
+        ),
         ...?dev?.overrides,
       ],
       child: dev?.wrap(const DonutApp()) ?? const DonutApp(),

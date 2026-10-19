@@ -15,6 +15,7 @@ xvfb-run -a -s "-screen 0 1100x1000x24" env -u WAYLAND_DISPLAY GDK_BACKEND=x11 \
 
 `DONUT_WINDOW=412x900` opens a phone-shaped window (read by `linux/runner/my_application.cc`).
 `DONUT_AT=20` presses 20 minutes past the dial's start instead of the default.
+`DONUT_ONBOARD=<step>` opens the welcome tour at that step (otherwise the harness skips it).
 
 ## How
 
