@@ -596,23 +596,25 @@ class ClockPainter extends CustomPainter {
     }
   }
 
-  /// The minute hand runs from the hub's edge to its ring, so it never
-  /// cuts through the text in the hub.
+  /// "Now" on the plan: a red needle across its ring. The hub's analog
+  /// clock tells the time; this shows where it falls among the entries.
   void _nowHand(Canvas canvas, ClockGeometry g) {
     final u = nowU;
     if (u == null || u < spec.origin || u >= spec.end) return;
     final place = spec.place(u);
-    final (_, r1) = g.laneBounds(place.lane);
+    final (r0, r1) = g.laneBounds(place.lane);
     const red = Color(0xFFE5484D);
-    final paint = Paint()
-      ..color = red
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-    final tail = g.pointAt(place.angle, g.innerR0 * 0.62);
-    final tip = g.pointAt(place.angle, r1 + 2);
-    canvas.drawLine(tail, tip, paint);
-    canvas.drawCircle(tip, 3.5, Paint()..color = red);
-    canvas.drawCircle(tail, 3, Paint()..color = red);
+    final tail = g.pointAt(place.angle, r0 - 3);
+    final tip = g.pointAt(place.angle, r1 + 3);
+    canvas.drawLine(
+      tail,
+      tip,
+      Paint()
+        ..color = red
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawCircle(tip, 4, Paint()..color = red);
   }
 
   Path _sector(

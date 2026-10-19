@@ -41,13 +41,27 @@
             </intent-filter>
         </receiver>
         <!-- Home-screen widget: today's dial with a live hour hand. -->
-        <receiver android:name=".DayClockWidget" android:exported="true">
+        <receiver
+            android:name=".DayClockWidget"
+            android:exported="true"
+            android:label="Donut · day">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/day_clock_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".HourClockWidget"
+            android:exported="true"
+            android:label="Donut · hour">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/hour_clock_widget_info" />
         </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

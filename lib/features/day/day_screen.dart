@@ -723,6 +723,10 @@ class _DayPageState extends ConsumerState<DayPage> {
     final selectedBlock = plan.blocks
         .where((b) => b.id == _selected)
         .firstOrNull;
+    final selectedVisible =
+        selectedBlock != null &&
+        selectedBlock.endMin - day.startMin > spec.origin &&
+        selectedBlock.startMin - day.startMin < spec.end;
     final todosByBlock = <String, List<TodoRow>>{};
     for (final t in todos) {
       if (t.blockId != null) (todosByBlock[t.blockId!] ??= []).add(t);
@@ -744,6 +748,8 @@ class _DayPageState extends ConsumerState<DayPage> {
       use24h: settings.use24h,
       // The hub only describes the selected entry while it is on the rings
       // being shown (they can slide during a drag).
+      // The hub's analog clock, unless it is describing the selected entry.
+      analogClock: !selectedVisible,
       center: (shown) =>
           selectedBlock != null &&
               selectedBlock.endMin - day.startMin > shown.origin &&
@@ -872,7 +878,8 @@ class _DayPageState extends ConsumerState<DayPage> {
   }
 }
 
-/// Hub of the day dial: the date and how much is planned.
+/// Hub text of the day dial around the clock: the date above, how much is
+/// planned below.
 class _DayHub extends StatelessWidget {
   const _DayHub({required this.day, required this.plan});
 
@@ -889,35 +896,46 @@ class _DayHub extends StatelessWidget {
       final e = b.endMin > day.endMin ? day.endMin : b.endMin;
       return sum + (e - s);
     });
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          DateFormat.E().format(date).toUpperCase(),
-          style: t.labelLarge?.copyWith(
-            color: scheme.primary,
-            letterSpacing: 1.5,
-          ),
+    return _ClockHubText(
+      top: Text(
+        '${DateFormat.E().format(date).toUpperCase()} ${day.day}',
+        style: t.labelLarge?.copyWith(
+          color: scheme.primary,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
         ),
-        Text(
-          '${day.day}',
-          style: t.displaySmall?.copyWith(
-            fontWeight: FontWeight.w900,
-            height: 1.0,
-          ),
-        ),
-        Text(
-          planned == 0
-              ? DateFormat.MMM().format(date)
-              : formatDuration(planned),
-          style: t.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
-        ),
-      ],
+      ),
+      bottom: Text(
+        planned == 0 ? DateFormat.MMM().format(date) : formatDuration(planned),
+        style: t.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+      ),
     );
   }
 }
 
-/// Hub of the hour dial: just which hour this is.
+/// Hub text around the analog clock: a line above the hands' pivot and one
+/// below it, leaving the middle to the hands.
+class _ClockHubText extends StatelessWidget {
+  const _ClockHubText({required this.top, this.bottom});
+
+  final Widget top;
+  final Widget? bottom;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 120,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [top, bottom ?? const SizedBox.shrink()],
+      ),
+    ),
+  );
+}
+
+/// Hub text of the hour dial around the clock: NOW (or the hour shown)
+/// above, and below the digital time or the next pin's countdown.
 class _HourHub extends StatelessWidget {
   const _HourHub({
     required this.shown,
@@ -930,7 +948,7 @@ class _HourHub extends StatelessWidget {
   final DialSpec shown;
   final bool live;
 
-  /// Countdown to the next pin, shown under the live time.
+  /// Countdown to the next pin, shown below instead of the digital time.
   final String? next;
 
   /// Day-relative minute of now; the live hub shows the current time.
@@ -941,44 +959,32 @@ class _HourHub extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
-    final big = live
-        ? formatClock(
-            nowMinute,
-            use24h: use24h,
-          ).replaceAll(RegExp(r' (AM|PM)'), '')
-        : lapCaption(shown.origin, use24h: use24h);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (live)
-          Text(
-            'NOW',
-            style: t.labelLarge?.copyWith(
-              color: scheme.primary,
-              letterSpacing: 1.5,
-            ),
-          ),
-        Text(
-          big,
-          style: t.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w900,
-            height: 1.05,
-          ),
+    final time = formatClock(nowMinute, use24h: use24h);
+    return _ClockHubText(
+      top: Text(
+        live ? 'NOW' : lapCaption(shown.origin, use24h: use24h),
+        style: t.labelLarge?.copyWith(
+          color: live ? scheme.primary : scheme.onSurface,
+          fontWeight: FontWeight.w900,
+          letterSpacing: live ? 1.5 : 0.4,
         ),
-        if (live && next != null)
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 150),
-            child: Text(
-              next!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: t.labelMedium?.copyWith(
-                color: scheme.tertiary,
-                fontWeight: FontWeight.w800,
+      ),
+      bottom: !live
+          ? null
+          : ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 116),
+              child: Text(
+                next ?? time,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: t.labelMedium?.copyWith(
+                  color: next != null
+                      ? scheme.tertiary
+                      : scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-          ),
-      ],
     );
   }
 }

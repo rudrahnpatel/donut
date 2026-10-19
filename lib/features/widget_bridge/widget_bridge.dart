@@ -12,7 +12,12 @@ import '../../data/repos/block_repo.dart';
 
 /// Key the Android widget reads (see DayClockWidget.kt).
 const _dataKey = 'donut_days';
-const _widgetClass = 'dev.rudra.donut.DayClockWidget';
+
+/// The day-view and hour-view widgets (see DayClockWidget.kt).
+const _widgetClasses = [
+  'dev.rudra.donut.DayClockWidget',
+  'dev.rudra.donut.HourClockWidget',
+];
 
 /// Saved entries for today and tomorrow, so the widget can turn over at
 /// midnight without the app running.
@@ -62,7 +67,9 @@ void startWidgetBridge(WidgetRef ref) {
     ], (b) => activities[b.activityId]?.color);
     try {
       await HomeWidget.saveWidgetData<String>(_dataKey, json);
-      await HomeWidget.updateWidget(qualifiedAndroidName: _widgetClass);
+      for (final name in _widgetClasses) {
+        await HomeWidget.updateWidget(qualifiedAndroidName: name);
+      }
     } catch (e) {
       debugPrint('Widget update failed: $e');
     }

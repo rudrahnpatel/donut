@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The "now" hand: red, reaching out across the rings like the app's. -->
+<!-- Hour hand: short and broad, inside the numerals. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="200dp"
-    android:height="200dp"
+    android:width="400dp"
+    android:height="400dp"
     android:viewportWidth="200"
     android:viewportHeight="200">
     <path
-        android:pathData="M100,100L100,12"
-        android:strokeWidth="4"
-        android:strokeColor="#FFE5484D"
+        android:pathData="M100,104L100,79"
+        android:strokeWidth="6"
+        android:strokeColor="#FFF2EEF6"
         android:strokeLineCap="round" />
-    <path android:fillColor="#FFE5484D" android:pathData="M100,100m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
 </vector>

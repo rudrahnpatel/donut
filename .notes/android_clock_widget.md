@@ -2,9 +2,13 @@
 
 ## What
 
-A 2×2 resizable widget showing today's day dial: inner ring AM, outer ring PM, entries in
-their colours, the part of the day already gone dimmed. A live hour hand sits on top.
-Tapping it opens the app.
+Two 2×2 resizable widgets in the picker, both with a live analog clock on top: hour and
+minute hands, plus a second hand on Android 12+. Tapping either opens the app.
+
+- **Donut · day:** today's day dial, inner ring AM and outer ring PM, entries in their
+  colours, time already gone dimmed.
+- **Donut · hour:** this hour inside, the next hour outside (faded, with a small "11 AM"
+  tag), like the app's hour dial. Numerals are 00/15/30/45.
 
 ## How
 
@@ -16,13 +20,21 @@ Tapping it opens the app.
   - Colours are resolved in Dart (entry → activity → hash fallback), so Kotlin doesn't
     repeat the colour rules.
 - **Kotlin side** (`android/app/src/main/kotlin/dev/rudra/donut/`):
-  - `DayClockWidget : HomeWidgetProvider` reads today's array (by `LocalDate.now()` epoch
-    day) and calls `ClockBitmapRenderer.render(entries, 480, nowMinute)`.
-  - It sets the bitmap on an `ImageView` and wires a launch intent.
-  - `updatePeriodMillis` is 30 minutes, so the dimming advances and the dial turns over at
-    midnight (tomorrow's data is already stored) without the app running.
-- `res/layout/day_clock_widget.xml`: the bitmap with an `AnalogClock` on top. The clock has
-  a transparent dial, a custom hour hand and an empty minute hand (`widget_hand_none`).
+  - `DonutClockWidget : HomeWidgetProvider` is shared by `DayClockWidget` and
+    `HourClockWidget`.
+    - The day view renders today's array (`renderDay`).
+    - The hour view renders today's and tomorrow's (tomorrow shifted by 1440), so at
+      23:xx the outer ring shows tomorrow's first hour (`renderHour`).
+  - Each update books the next one with a non-waking `AlarmManager.RTC` `setWindow`: the
+    next 15-minute boundary (day view) or 5-minute boundary (hour view). The dimming
+    advances, the hour view turns over on the hour, and the day view turns over at
+    midnight without the app running. `onDisabled` cancels the alarm.
+    `updatePeriodMillis` (30 min) stays as a backstop.
+- `res/layout/day_clock_widget.xml`: the bitmap with an `AnalogClock` on top: transparent
+  dial, `widget_hand_hour` / `_minute`, and `_second` (API 31+, ignored before). The
+  drawables are 400 dp so `AnalogClock`, which only ever scales down, always fits them to
+  the widget. At their first 200 dp size, a widget resized above 200 dp got undersized
+  hands.
 
 ```mermaid
 flowchart LR
@@ -39,8 +51,13 @@ flowchart LR
   Flutter engine to wake up on every update. Drawing the rings natively with Android
   Canvas is a few dozen lines and runs inside the widget's own update.
 - `RemoteViews` can't animate a custom hand, but `AnalogClock` animates itself and its
-  12-hour face lines up exactly with the AM/PM rings, so the hand is always live while the
-  bitmap only needs refreshing every half hour.
+  12-hour face lines up exactly with the AM/PM rings. In the day view the hour hand points
+  at "now" on the rings; in the hour view the minute hand does. The hands are always live
+  while the bitmap only needs refreshing every few minutes.
+- The first version had only a red hour hand. The user asked for "a proper analog clock
+  in center, in app and in widget", and for an hour-view widget. Two providers, rather
+  than a configuration screen, let both be placed side by side from the picker with no
+  extra UI.
 - Storing tomorrow too lets the midnight update show the new day's plan with the app closed.
 
 **Not yet verified on a device:** the APK builds and the encoding is unit-tested, but the

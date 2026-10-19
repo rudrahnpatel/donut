@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Second hand (Android 12+), red like the app's "now". -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    <path
+        android:pathData="M100,108L100,66"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFE5484D"
+        android:strokeLineCap="round" />
+    <path android:fillColor="#FFE5484D" android:pathData="M100,100m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4 0" />
+</vector>

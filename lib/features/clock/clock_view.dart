@@ -11,6 +11,7 @@ import '../radial_menu/hour_picker_controller.dart';
 import '../radial_menu/hour_picker_overlay.dart';
 import '../radial_menu/marking_menu_controller.dart';
 import '../radial_menu/marking_menu_overlay.dart';
+import 'analog_hands.dart';
 import 'clock_geometry.dart';
 import 'clock_gesture_machine.dart';
 import 'clock_painter.dart';
@@ -61,6 +62,7 @@ class ClockView extends StatefulWidget {
     this.pinMenuItems,
     this.onPinPick,
     this.menuItemColor,
+    this.analogClock = true,
   });
 
   final DialSpec spec;
@@ -88,6 +90,10 @@ class ClockView extends StatefulWidget {
 
   /// Shown in the hub when not dragging.
   final Widget Function(DialSpec shown) center;
+
+  /// Whether the hub shows the analog clock's hands over [center] (off
+  /// while it describes a selected entry, and while dragging).
+  final bool analogClock;
 
   final void Function(int start, int end) onCreate;
   final void Function(String id, int start, int end) onChange;
@@ -602,6 +608,17 @@ class _ClockViewState extends State<ClockView>
                         ),
                       ),
                     ),
+                    // The hub's analog clock, over its text.
+                    if (widget.analogClock && preview == null)
+                      Positioned.fromRect(
+                        rect: Rect.fromCircle(
+                          center: geometry.center,
+                          radius: geometry.beforeR0,
+                        ),
+                        child: IgnorePointer(
+                          child: AnalogHands(radius: geometry.radius),
+                        ),
+                      ),
                     // A bubble above the finger: on phones the hand hides the
                     // hub when dragging along the top of the dial.
                     if (preview != null && _pointer != null)

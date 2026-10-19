@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Transparent face that only sets the AnalogClock's size; the real face is
-     the bitmap underneath. -->
+<!-- Transparent face that only sets the AnalogClock's size (large, so it
+     always scales down to fit); the real face is the bitmap underneath. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="200dp"
-    android:height="200dp"
+    android:width="400dp"
+    android:height="400dp"
     android:viewportWidth="200"
     android:viewportHeight="200">
     <path android:fillColor="#00000000" android:pathData="M0,0h200v200h-200z" />

@@ -125,3 +125,34 @@ sequenceDiagram
 - Interpolating radii in the painter keeps the gesture machine and geometry untouched: hit
   testing uses the final spec, and the animation is short enough that a touch during it
   lands on the settled layout.
+
+## Analog clock in the hub
+
+### What
+
+The hub of both dials is a real analog clock: hour, minute and a red second hand ticking
+each second. The text moves above and below the pivot. The day dial shows "MON 19" above
+and the hours planned below. The hour dial shows NOW (or the hour shown) above and the
+digital time (or the next pin's countdown) below. "Now" on the rings is a short red
+needle across its ring rather than a hand from the hub.
+
+### How
+
+`lib/features/clock/analog_hands.dart`:
+- `AnalogHands` is its own `RepaintBoundary` with a `Timer` aligned to whole seconds, so
+  only the hands repaint.
+- Hand lengths come from the dial radius (minute 0.29R, inside the day dial's numerals at
+  0.34R).
+
+`ClockView`:
+- It lays the hands over the hub when `analogClock` is true and nothing is being dragged.
+- `DayPage` turns it off while the hub describes a selected entry.
+- The hub text (`_ClockHubText`) is a fixed 120-unit square, so `FittedBox` scales it
+  with the dial.
+
+### Why
+
+The user asked for "a proper analog clock in center". A hand from the hub to the ring
+(the old now-hand) would have run into the clock's hands, so "now" became a ring-only
+marker. On the day dial the hour hand and the marker point the same way; on the hour
+dial the minute hand and the marker do.
