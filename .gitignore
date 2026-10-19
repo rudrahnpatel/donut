@@ -49,3 +49,6 @@ app.*.map.json
 
 # Google OAuth client IDs (see docs/google-setup.md); never commit
 google.json
+
+# The Noctalia plugin keeps its settings next to it (symlinked in).
+linux/noctalia/donut-work/settings.json

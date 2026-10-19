@@ -17,6 +17,7 @@ part 'app_database.g.dart';
     Series,
     Pins,
     Chains,
+    WorkSessions,
     RemoteLinks,
     Settings,
     LocalKv,
@@ -27,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'donut'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -42,6 +43,7 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) await m.createTable(pins);
       if (from < 4) await m.createTable(chains);
+      if (from < 5) await m.createTable(workSessions);
     },
   );
 

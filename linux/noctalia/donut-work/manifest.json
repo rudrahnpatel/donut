@@ -1,0 +1,31 @@
+{
+  "id": "donut-work",
+  "name": "Donut Work",
+  "version": "0.2.0",
+  "minNoctaliaVersion": "4.4.4",
+  "author": "Rudra",
+  "license": "MIT",
+  "description": "Counts your working time on its own: Claude Code busy in a project, or you active in a coding app. Today's total sits in the bar; Donut draws it on its dial.",
+  "tags": [
+    "Bar",
+    "Productivity"
+  ],
+  "entryPoints": {
+    "main": "Main.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml",
+    "settings": "Settings.qml"
+  },
+  "dependencies": {
+    "plugins": []
+  },
+  "metadata": {
+    "defaultSettings": {
+      "idleMinutes": 5,
+      "countClaudeCode": true,
+      "workApps": "kitty, foot, alacritty, com.mitchellh.ghostty, org.wezfurlong.wezterm, code, code-oss, cursor, dev.zed.zed, zed, neovide, jetbrains-idea, jetbrains-studio, jetbrains-pycharm",
+      "browserKeywords": "claude, github, gitlab, localhost, 127.0.0.1, stack overflow, docs, pub.dev, flutter, mdn",
+      "personalProjects": ""
+    }
+  }
+}

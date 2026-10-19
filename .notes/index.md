@@ -15,3 +15,4 @@
 - [app_icon.md](app_icon.md) — the donut-clock icon, generated for Android (adaptive, themed, notification), Linux (desktop entry) and Windows by tool/make_icons.py
 - [running_late.md](running_late.md) — "running late": the entry under way runs longer, later ones move until a gap absorbs the delay; pins stay and missed ones are warned about; also from the countdown notification
 - [chains.md](chains.md) — reusable step sequences (Commute: ready 5 → walk 5 → train 40) saved from back-to-back entries, placed before/after a pin or at a time as sketches
+- [work_tracker.md](work_tracker.md) — automatic work time: Noctalia "Donut Work" plugin (Claude Code logs, idle, focused app; bar total, personal projects) feeding green worked arcs and a card in Donut, synced

@@ -16,6 +16,7 @@ const syncedTables = <String, String>{
   'series': 'id',
   'pins': 'id',
   'chains': 'id',
+  'work_sessions': 'id',
   'settings': 'key',
 };
 

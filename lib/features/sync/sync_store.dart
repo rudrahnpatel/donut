@@ -37,6 +37,10 @@ class SyncStore {
     'chains': {
       for (final r in await _db.select(_db.chains).get()) r.id: r.toJson(),
     },
+    'work_sessions': {
+      for (final r in await _db.select(_db.workSessions).get())
+        r.id: r.toJson(),
+    },
     'settings': {
       for (final r in await _db.select(_db.settings).get())
         if (!deviceSettings.contains(r.key)) r.key: r.toJson(),
@@ -76,6 +80,10 @@ class SyncStore {
               await _db
                   .into(_db.pins)
                   .insertOnConflictUpdate(PinRow.fromJson(json));
+            case 'work_sessions':
+              await _db
+                  .into(_db.workSessions)
+                  .insertOnConflictUpdate(WorkSessionRow.fromJson(json));
             case 'chains':
               await _db
                   .into(_db.chains)

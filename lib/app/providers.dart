@@ -8,6 +8,7 @@ import '../data/repos/library_repo.dart';
 import '../data/repos/pin_repo.dart';
 import '../data/repos/plan_tools_repo.dart';
 import '../data/repos/settings_repo.dart';
+import '../data/repos/work_repo.dart';
 
 /// Overridden in `main` once the database is open.
 final databaseProvider = Provider<AppDatabase>(
@@ -75,6 +76,17 @@ final pinRepoProvider = Provider(
 final dayPinsProvider = StreamProvider.family<List<PinRow>, Day>(
   (ref, day) => ref
       .watch(pinRepoProvider)
+      .watchRange(day.startMin - minutesPerDay, day.endMin + minutesPerDay),
+);
+
+final workRepoProvider = Provider(
+  (ref) => WorkRepo(ref.watch(databaseProvider), ref.watch(hlcClockProvider)),
+);
+
+/// Worked sessions overlapping [day] (and the edges of its neighbours).
+final dayWorkProvider = StreamProvider.family<List<WorkSessionRow>, Day>(
+  (ref, day) => ref
+      .watch(workRepoProvider)
       .watchRange(day.startMin - minutesPerDay, day.endMin + minutesPerDay),
 );
 

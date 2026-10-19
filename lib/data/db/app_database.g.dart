@@ -4261,6 +4261,520 @@ class ChainsCompanion extends UpdateCompanion<ChainRow> {
   }
 }
 
+class $WorkSessionsTable extends WorkSessions
+    with TableInfo<$WorkSessionsTable, WorkSessionRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WorkSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startMinMeta = const VerificationMeta(
+    'startMin',
+  );
+  @override
+  late final GeneratedColumn<int> startMin = GeneratedColumn<int>(
+    'start_min',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endMinMeta = const VerificationMeta('endMin');
+  @override
+  late final GeneratedColumn<int> endMin = GeneratedColumn<int>(
+    'end_min',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _projectsJsonMeta = const VerificationMeta(
+    'projectsJson',
+  );
+  @override
+  late final GeneratedColumn<String> projectsJson = GeneratedColumn<String>(
+    'projects_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _manualMeta = const VerificationMeta('manual');
+  @override
+  late final GeneratedColumn<bool> manual = GeneratedColumn<bool>(
+    'manual',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("manual" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _hlcMeta = const VerificationMeta('hlc');
+  @override
+  late final GeneratedColumn<String> hlc = GeneratedColumn<String>(
+    'hlc',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedMeta = const VerificationMeta(
+    'deleted',
+  );
+  @override
+  late final GeneratedColumn<bool> deleted = GeneratedColumn<bool>(
+    'deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    startMin,
+    endMin,
+    projectsJson,
+    source,
+    manual,
+    hlc,
+    deleted,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'work_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WorkSessionRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('start_min')) {
+      context.handle(
+        _startMinMeta,
+        startMin.isAcceptableOrUnknown(data['start_min']!, _startMinMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startMinMeta);
+    }
+    if (data.containsKey('end_min')) {
+      context.handle(
+        _endMinMeta,
+        endMin.isAcceptableOrUnknown(data['end_min']!, _endMinMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_endMinMeta);
+    }
+    if (data.containsKey('projects_json')) {
+      context.handle(
+        _projectsJsonMeta,
+        projectsJson.isAcceptableOrUnknown(
+          data['projects_json']!,
+          _projectsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_projectsJsonMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('manual')) {
+      context.handle(
+        _manualMeta,
+        manual.isAcceptableOrUnknown(data['manual']!, _manualMeta),
+      );
+    }
+    if (data.containsKey('hlc')) {
+      context.handle(
+        _hlcMeta,
+        hlc.isAcceptableOrUnknown(data['hlc']!, _hlcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hlcMeta);
+    }
+    if (data.containsKey('deleted')) {
+      context.handle(
+        _deletedMeta,
+        deleted.isAcceptableOrUnknown(data['deleted']!, _deletedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WorkSessionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WorkSessionRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      startMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}start_min'],
+      )!,
+      endMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}end_min'],
+      )!,
+      projectsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}projects_json'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      manual: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}manual'],
+      )!,
+      hlc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hlc'],
+      )!,
+      deleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}deleted'],
+      )!,
+    );
+  }
+
+  @override
+  $WorkSessionsTable createAlias(String alias) {
+    return $WorkSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class WorkSessionRow extends DataClass implements Insertable<WorkSessionRow> {
+  /// `<source>-<start epoch ms>`: stable while the session grows.
+  final String id;
+  final int startMin;
+  final int endMin;
+  final String projectsJson;
+
+  /// `tracker` (the plugin) or `claude-logs` (estimated history).
+  final String source;
+  final bool manual;
+  final String hlc;
+  final bool deleted;
+  const WorkSessionRow({
+    required this.id,
+    required this.startMin,
+    required this.endMin,
+    required this.projectsJson,
+    required this.source,
+    required this.manual,
+    required this.hlc,
+    required this.deleted,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['start_min'] = Variable<int>(startMin);
+    map['end_min'] = Variable<int>(endMin);
+    map['projects_json'] = Variable<String>(projectsJson);
+    map['source'] = Variable<String>(source);
+    map['manual'] = Variable<bool>(manual);
+    map['hlc'] = Variable<String>(hlc);
+    map['deleted'] = Variable<bool>(deleted);
+    return map;
+  }
+
+  WorkSessionsCompanion toCompanion(bool nullToAbsent) {
+    return WorkSessionsCompanion(
+      id: Value(id),
+      startMin: Value(startMin),
+      endMin: Value(endMin),
+      projectsJson: Value(projectsJson),
+      source: Value(source),
+      manual: Value(manual),
+      hlc: Value(hlc),
+      deleted: Value(deleted),
+    );
+  }
+
+  factory WorkSessionRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WorkSessionRow(
+      id: serializer.fromJson<String>(json['id']),
+      startMin: serializer.fromJson<int>(json['startMin']),
+      endMin: serializer.fromJson<int>(json['endMin']),
+      projectsJson: serializer.fromJson<String>(json['projectsJson']),
+      source: serializer.fromJson<String>(json['source']),
+      manual: serializer.fromJson<bool>(json['manual']),
+      hlc: serializer.fromJson<String>(json['hlc']),
+      deleted: serializer.fromJson<bool>(json['deleted']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'startMin': serializer.toJson<int>(startMin),
+      'endMin': serializer.toJson<int>(endMin),
+      'projectsJson': serializer.toJson<String>(projectsJson),
+      'source': serializer.toJson<String>(source),
+      'manual': serializer.toJson<bool>(manual),
+      'hlc': serializer.toJson<String>(hlc),
+      'deleted': serializer.toJson<bool>(deleted),
+    };
+  }
+
+  WorkSessionRow copyWith({
+    String? id,
+    int? startMin,
+    int? endMin,
+    String? projectsJson,
+    String? source,
+    bool? manual,
+    String? hlc,
+    bool? deleted,
+  }) => WorkSessionRow(
+    id: id ?? this.id,
+    startMin: startMin ?? this.startMin,
+    endMin: endMin ?? this.endMin,
+    projectsJson: projectsJson ?? this.projectsJson,
+    source: source ?? this.source,
+    manual: manual ?? this.manual,
+    hlc: hlc ?? this.hlc,
+    deleted: deleted ?? this.deleted,
+  );
+  WorkSessionRow copyWithCompanion(WorkSessionsCompanion data) {
+    return WorkSessionRow(
+      id: data.id.present ? data.id.value : this.id,
+      startMin: data.startMin.present ? data.startMin.value : this.startMin,
+      endMin: data.endMin.present ? data.endMin.value : this.endMin,
+      projectsJson: data.projectsJson.present
+          ? data.projectsJson.value
+          : this.projectsJson,
+      source: data.source.present ? data.source.value : this.source,
+      manual: data.manual.present ? data.manual.value : this.manual,
+      hlc: data.hlc.present ? data.hlc.value : this.hlc,
+      deleted: data.deleted.present ? data.deleted.value : this.deleted,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkSessionRow(')
+          ..write('id: $id, ')
+          ..write('startMin: $startMin, ')
+          ..write('endMin: $endMin, ')
+          ..write('projectsJson: $projectsJson, ')
+          ..write('source: $source, ')
+          ..write('manual: $manual, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    startMin,
+    endMin,
+    projectsJson,
+    source,
+    manual,
+    hlc,
+    deleted,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WorkSessionRow &&
+          other.id == this.id &&
+          other.startMin == this.startMin &&
+          other.endMin == this.endMin &&
+          other.projectsJson == this.projectsJson &&
+          other.source == this.source &&
+          other.manual == this.manual &&
+          other.hlc == this.hlc &&
+          other.deleted == this.deleted);
+}
+
+class WorkSessionsCompanion extends UpdateCompanion<WorkSessionRow> {
+  final Value<String> id;
+  final Value<int> startMin;
+  final Value<int> endMin;
+  final Value<String> projectsJson;
+  final Value<String> source;
+  final Value<bool> manual;
+  final Value<String> hlc;
+  final Value<bool> deleted;
+  final Value<int> rowid;
+  const WorkSessionsCompanion({
+    this.id = const Value.absent(),
+    this.startMin = const Value.absent(),
+    this.endMin = const Value.absent(),
+    this.projectsJson = const Value.absent(),
+    this.source = const Value.absent(),
+    this.manual = const Value.absent(),
+    this.hlc = const Value.absent(),
+    this.deleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  WorkSessionsCompanion.insert({
+    required String id,
+    required int startMin,
+    required int endMin,
+    required String projectsJson,
+    required String source,
+    this.manual = const Value.absent(),
+    required String hlc,
+    this.deleted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       startMin = Value(startMin),
+       endMin = Value(endMin),
+       projectsJson = Value(projectsJson),
+       source = Value(source),
+       hlc = Value(hlc);
+  static Insertable<WorkSessionRow> custom({
+    Expression<String>? id,
+    Expression<int>? startMin,
+    Expression<int>? endMin,
+    Expression<String>? projectsJson,
+    Expression<String>? source,
+    Expression<bool>? manual,
+    Expression<String>? hlc,
+    Expression<bool>? deleted,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startMin != null) 'start_min': startMin,
+      if (endMin != null) 'end_min': endMin,
+      if (projectsJson != null) 'projects_json': projectsJson,
+      if (source != null) 'source': source,
+      if (manual != null) 'manual': manual,
+      if (hlc != null) 'hlc': hlc,
+      if (deleted != null) 'deleted': deleted,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  WorkSessionsCompanion copyWith({
+    Value<String>? id,
+    Value<int>? startMin,
+    Value<int>? endMin,
+    Value<String>? projectsJson,
+    Value<String>? source,
+    Value<bool>? manual,
+    Value<String>? hlc,
+    Value<bool>? deleted,
+    Value<int>? rowid,
+  }) {
+    return WorkSessionsCompanion(
+      id: id ?? this.id,
+      startMin: startMin ?? this.startMin,
+      endMin: endMin ?? this.endMin,
+      projectsJson: projectsJson ?? this.projectsJson,
+      source: source ?? this.source,
+      manual: manual ?? this.manual,
+      hlc: hlc ?? this.hlc,
+      deleted: deleted ?? this.deleted,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (startMin.present) {
+      map['start_min'] = Variable<int>(startMin.value);
+    }
+    if (endMin.present) {
+      map['end_min'] = Variable<int>(endMin.value);
+    }
+    if (projectsJson.present) {
+      map['projects_json'] = Variable<String>(projectsJson.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (manual.present) {
+      map['manual'] = Variable<bool>(manual.value);
+    }
+    if (hlc.present) {
+      map['hlc'] = Variable<String>(hlc.value);
+    }
+    if (deleted.present) {
+      map['deleted'] = Variable<bool>(deleted.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WorkSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('startMin: $startMin, ')
+          ..write('endMin: $endMin, ')
+          ..write('projectsJson: $projectsJson, ')
+          ..write('source: $source, ')
+          ..write('manual: $manual, ')
+          ..write('hlc: $hlc, ')
+          ..write('deleted: $deleted, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $RemoteLinksTable extends RemoteLinks
     with TableInfo<$RemoteLinksTable, RemoteLinkRow> {
   @override
@@ -5046,6 +5560,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SeriesTable series = $SeriesTable(this);
   late final $PinsTable pins = $PinsTable(this);
   late final $ChainsTable chains = $ChainsTable(this);
+  late final $WorkSessionsTable workSessions = $WorkSessionsTable(this);
   late final $RemoteLinksTable remoteLinks = $RemoteLinksTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $LocalKvTable localKv = $LocalKvTable(this);
@@ -5062,6 +5577,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     series,
     pins,
     chains,
+    workSessions,
     remoteLinks,
     settings,
     localKv,
@@ -7236,6 +7752,274 @@ typedef $$ChainsTableProcessedTableManager =
       ChainRow,
       PrefetchHooks Function()
     >;
+typedef $$WorkSessionsTableCreateCompanionBuilder =
+    WorkSessionsCompanion Function({
+      required String id,
+      required int startMin,
+      required int endMin,
+      required String projectsJson,
+      required String source,
+      Value<bool> manual,
+      required String hlc,
+      Value<bool> deleted,
+      Value<int> rowid,
+    });
+typedef $$WorkSessionsTableUpdateCompanionBuilder =
+    WorkSessionsCompanion Function({
+      Value<String> id,
+      Value<int> startMin,
+      Value<int> endMin,
+      Value<String> projectsJson,
+      Value<String> source,
+      Value<bool> manual,
+      Value<String> hlc,
+      Value<bool> deleted,
+      Value<int> rowid,
+    });
+
+class $$WorkSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $WorkSessionsTable> {
+  $$WorkSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startMin => $composableBuilder(
+    column: $table.startMin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get endMin => $composableBuilder(
+    column: $table.endMin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get projectsJson => $composableBuilder(
+    column: $table.projectsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get manual => $composableBuilder(
+    column: $table.manual,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$WorkSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $WorkSessionsTable> {
+  $$WorkSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startMin => $composableBuilder(
+    column: $table.startMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get endMin => $composableBuilder(
+    column: $table.endMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get projectsJson => $composableBuilder(
+    column: $table.projectsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get manual => $composableBuilder(
+    column: $table.manual,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hlc => $composableBuilder(
+    column: $table.hlc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get deleted => $composableBuilder(
+    column: $table.deleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WorkSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WorkSessionsTable> {
+  $$WorkSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get startMin =>
+      $composableBuilder(column: $table.startMin, builder: (column) => column);
+
+  GeneratedColumn<int> get endMin =>
+      $composableBuilder(column: $table.endMin, builder: (column) => column);
+
+  GeneratedColumn<String> get projectsJson => $composableBuilder(
+    column: $table.projectsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<bool> get manual =>
+      $composableBuilder(column: $table.manual, builder: (column) => column);
+
+  GeneratedColumn<String> get hlc =>
+      $composableBuilder(column: $table.hlc, builder: (column) => column);
+
+  GeneratedColumn<bool> get deleted =>
+      $composableBuilder(column: $table.deleted, builder: (column) => column);
+}
+
+class $$WorkSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WorkSessionsTable,
+          WorkSessionRow,
+          $$WorkSessionsTableFilterComposer,
+          $$WorkSessionsTableOrderingComposer,
+          $$WorkSessionsTableAnnotationComposer,
+          $$WorkSessionsTableCreateCompanionBuilder,
+          $$WorkSessionsTableUpdateCompanionBuilder,
+          (
+            WorkSessionRow,
+            BaseReferences<_$AppDatabase, $WorkSessionsTable, WorkSessionRow>,
+          ),
+          WorkSessionRow,
+          PrefetchHooks Function()
+        > {
+  $$WorkSessionsTableTableManager(_$AppDatabase db, $WorkSessionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WorkSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WorkSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WorkSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<int> startMin = const Value.absent(),
+                Value<int> endMin = const Value.absent(),
+                Value<String> projectsJson = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<bool> manual = const Value.absent(),
+                Value<String> hlc = const Value.absent(),
+                Value<bool> deleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WorkSessionsCompanion(
+                id: id,
+                startMin: startMin,
+                endMin: endMin,
+                projectsJson: projectsJson,
+                source: source,
+                manual: manual,
+                hlc: hlc,
+                deleted: deleted,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required int startMin,
+                required int endMin,
+                required String projectsJson,
+                required String source,
+                Value<bool> manual = const Value.absent(),
+                required String hlc,
+                Value<bool> deleted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WorkSessionsCompanion.insert(
+                id: id,
+                startMin: startMin,
+                endMin: endMin,
+                projectsJson: projectsJson,
+                source: source,
+                manual: manual,
+                hlc: hlc,
+                deleted: deleted,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$WorkSessionsTable, WorkSessionRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $WorkSessionsTable,
+                    WorkSessionRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$WorkSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WorkSessionsTable,
+      WorkSessionRow,
+      $$WorkSessionsTableFilterComposer,
+      $$WorkSessionsTableOrderingComposer,
+      $$WorkSessionsTableAnnotationComposer,
+      $$WorkSessionsTableCreateCompanionBuilder,
+      $$WorkSessionsTableUpdateCompanionBuilder,
+      (
+        WorkSessionRow,
+        BaseReferences<_$AppDatabase, $WorkSessionsTable, WorkSessionRow>,
+      ),
+      WorkSessionRow,
+      PrefetchHooks Function()
+    >;
 typedef $$RemoteLinksTableCreateCompanionBuilder =
     RemoteLinksCompanion Function({
       required String blockId,
@@ -7748,6 +8532,8 @@ class $AppDatabaseManager {
   $$PinsTableTableManager get pins => $$PinsTableTableManager(_db, _db.pins);
   $$ChainsTableTableManager get chains =>
       $$ChainsTableTableManager(_db, _db.chains);
+  $$WorkSessionsTableTableManager get workSessions =>
+      $$WorkSessionsTableTableManager(_db, _db.workSessions);
   $$RemoteLinksTableTableManager get remoteLinks =>
       $$RemoteLinksTableTableManager(_db, _db.remoteLinks);
   $$SettingsTableTableManager get settings =>

@@ -59,6 +59,7 @@ class ClockView extends StatefulWidget {
     this.selectedId,
     this.ghosts = const [],
     this.pins = const [],
+    this.worked = const [],
     this.pinMenuItems,
     this.onPinPick,
     this.menuItemColor,
@@ -81,6 +82,9 @@ class ClockView extends StatefulWidget {
 
   /// Pins ("Reach by 4:55"), day-relative.
   final List<PaintPin> pins;
+
+  /// Time actually worked, day-relative (see [ClockPainter.worked]).
+  final List<(int, int)> worked;
 
   /// The menu for holding an empty spot of a ring (pin kinds), and what to
   /// do with the pick at day-relative minute `u`. Without them, holding an
@@ -584,6 +588,7 @@ class _ClockViewState extends State<ClockView>
                                 if (_menuPinU != null)
                                   PaintPin(u: _menuPinU!, glyph: '📍'),
                               ],
+                              worked: widget.worked,
                               lapOffset: _lapOffset,
                             ),
                           ),

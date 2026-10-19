@@ -11,6 +11,7 @@ import '../features/reminders/reminder_providers.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/sync/sync_controller.dart';
 import '../features/widget_bridge/widget_bridge.dart';
+import '../features/work/work_import.dart';
 import 'providers.dart';
 
 /// Which top-level destination is showing.
@@ -48,6 +49,7 @@ class _AppShellState extends ConsumerState<AppShell>
     _onNewDay();
     startReminders(ref);
     startWidgetBridge(ref);
+    startWorkImport(ref);
     ref.read(syncControllerProvider.notifier).start();
   }
 

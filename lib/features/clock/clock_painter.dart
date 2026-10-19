@@ -50,6 +50,7 @@ class ClockPainter extends CustomPainter {
     this.dimAll = false,
     this.ghosts = const [],
     this.pins = const [],
+    this.worked = const [],
     this.lapOffset = 0,
   });
 
@@ -73,6 +74,10 @@ class ClockPainter extends CustomPainter {
   final List<(int, int)> ghosts;
 
   final List<PaintPin> pins;
+
+  /// Time actually worked (day-relative), drawn as thin arcs just outside
+  /// each ring: the plan inside, what happened beside it.
+  final List<(int, int)> worked;
 
   /// While the hour changes, entries glide between rings: each is drawn
   /// [lapOffset] laps further out than its final ring (+1 → 0 when moving
@@ -118,6 +123,7 @@ class ClockPainter extends CustomPainter {
     }
     _pins(canvas, g);
     if (!_animating) _pastScrim(canvas, g);
+    _worked(canvas, g);
     if (spec.isHour) _captions(canvas, g);
     if (preview != null) {
       final p = preview!;
@@ -557,6 +563,38 @@ class ClockPainter extends CustomPainter {
     }
   }
 
+  static const _workedColor = Color(0xFF3DDC84);
+
+  void _worked(Canvas canvas, ClockGeometry g) {
+    if (worked.isEmpty) return;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = math.max(2.5, g.radius * 0.022)
+      ..color = _workedColor.withValues(alpha: _animating ? 0.5 : 0.95);
+    for (final (s, e) in worked) {
+      for (final p in spec.pieces(s.toDouble(), e.toDouble())) {
+        // In the gap outside the ring it belongs to.
+        final double r = switch (p.lane) {
+          Lane.inner => (g.innerR1 + g.outerR0) / 2,
+          Lane.outer => (g.outerR1 + g.afterR0) / 2,
+          _ => 0,
+        };
+        if (r == 0) continue;
+        // Round caps reach past the ends; trim them so short spans stay
+        // honest.
+        final trim = math.min(paint.strokeWidth / 2 / r, p.sweep / 3);
+        canvas.drawArc(
+          Rect.fromCircle(center: g.center, radius: r),
+          p.startAngle - math.pi / 2 + trim,
+          math.max(0.001, p.sweep - 2 * trim),
+          false,
+          paint,
+        );
+      }
+    }
+  }
+
   void _handles(Canvas canvas, ClockGeometry g, PaintBlock b) {
     final fill = Paint()..color = scheme.surface;
     final ring = Paint()
@@ -664,6 +702,7 @@ class ClockPainter extends CustomPainter {
       old.scheme != scheme ||
       old.ghosts != ghosts ||
       old.pins != pins ||
+      old.worked != worked ||
       old.captions != captions ||
       old.lapOffset != lapOffset;
 }

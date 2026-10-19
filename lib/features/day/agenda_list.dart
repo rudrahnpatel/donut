@@ -29,6 +29,7 @@ class AgendaList extends StatelessWidget {
     required this.onAction,
     this.pins = const [],
     this.onPinAction,
+    this.header,
     this.hint = 'Drag along a ring to plan a block.',
   });
 
@@ -41,6 +42,9 @@ class AgendaList extends StatelessWidget {
   final bool use24h;
   final void Function(String id) onSelect;
   final void Function(PlanBlock block, AgendaAction action) onAction;
+
+  /// Shown above the entries (the day's worked time).
+  final Widget? header;
 
   /// The day's pins, listed among the entries by time.
   final List<PinRow> pins;
@@ -56,6 +60,7 @@ class AgendaList extends StatelessWidget {
       return ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          ?header,
           const SizedBox(height: 12),
           Icon(Icons.gesture_rounded, size: 40, color: scheme.outline),
           const SizedBox(height: 8),
@@ -70,7 +75,7 @@ class AgendaList extends StatelessWidget {
     return SlidableAutoCloseBehavior(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
-        children: _byTime(),
+        children: [?header, ..._byTime()],
       ),
     );
   }

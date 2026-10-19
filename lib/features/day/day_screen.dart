@@ -11,6 +11,7 @@ import '../../data/db/app_database.dart';
 import '../../data/repos/block_repo.dart';
 import '../../data/repos/pin_repo.dart';
 import '../../data/repos/plan_tools_repo.dart';
+import '../../data/repos/work_repo.dart';
 import '../../data/repos/settings_repo.dart';
 import '../clock/clock_painter.dart';
 import '../clock/clock_view.dart';
@@ -18,6 +19,7 @@ import '../clock/spiral_math.dart';
 import '../radial_menu/marking_menu_controller.dart';
 import '../sync/sync_controller.dart';
 import '../templates/chains.dart';
+import '../work/work_review.dart';
 import '../templates/day_actions.dart';
 import '../reminders/reminder_providers.dart';
 import 'plan_mode.dart';
@@ -776,6 +778,9 @@ class _DayPageState extends ConsumerState<DayPage> {
         ),
     ];
     final pins = ref.watch(dayPinsProvider(day)).value ?? const <PinRow>[];
+    final work =
+        ref.watch(dayWorkProvider(day)).value ?? const <WorkSessionRow>[];
+    final workedToday = workedMinutes(work, day.startMin, day.endMin);
     final paintPins = [
       for (final p in pins)
         PaintPin(
@@ -810,6 +815,10 @@ class _DayPageState extends ConsumerState<DayPage> {
       blocks: paintBlocks,
       ghosts: ghosts,
       pins: paintPins,
+      worked: [
+        for (final w in work)
+          (w.startMin - day.startMin, w.endMin - day.startMin),
+      ],
       selectedId: _selected,
       isToday: day == today,
       isPast: day < today,
@@ -900,6 +909,16 @@ class _DayPageState extends ConsumerState<DayPage> {
           if (p.atMin >= day.startMin && p.atMin < day.endMin) p,
       ],
       onPinAction: _onPinAction,
+      header: workedToday == 0
+          ? null
+          : WorkedCard(
+              minutes: workedToday,
+              projects: projectTotals([
+                for (final w in work)
+                  if (w.startMin >= day.startMin && w.startMin < day.endMin) w,
+              ]),
+              onTap: () => showWorkReview(context, day),
+            ),
       activities: activities,
       todosByBlock: todosByBlock,
       colorOf: colorOf,

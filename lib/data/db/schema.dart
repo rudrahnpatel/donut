@@ -118,6 +118,29 @@ class Chains extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Time actually worked, measured on the desktop (the Noctalia "Donut
+/// Work" plugin, or estimated from Claude Code's logs for earlier days).
+/// Floating local minutes like blocks; [projectsJson] maps project name →
+/// seconds (projects can overlap, so they may add up to more than the
+/// session). Synced, so the phone shows it too.
+@DataClassName('WorkSessionRow')
+class WorkSessions extends Table {
+  /// `<source>-<start epoch ms>`: stable while the session grows.
+  TextColumn get id => text()();
+  IntColumn get startMin => integer()();
+  IntColumn get endMin => integer()();
+  TextColumn get projectsJson => text()();
+
+  /// `tracker` (the plugin) or `claude-logs` (estimated history).
+  TextColumn get source => text()();
+  BoolColumn get manual => boolean().withDefault(const Constant(false))();
+  TextColumn get hlc => text()();
+  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// A recurring block. Instances are generated as ordinary [Blocks] rows with
 /// deterministic ids (UUIDv5 of series id + day) a fixed window ahead.
 @DataClassName('SeriesRow')
