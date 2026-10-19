@@ -385,19 +385,12 @@ class _DayPageState extends ConsumerState<DayPage> {
         if (todo == null) return;
         await _setActivity(blockId, todo.activityId);
         await lib.updateTodo(todo.id, blockId: Value(blockId));
-      case 'pinstart' || 'pinend':
-        final b = ref
-            .read(dayPlanProvider(day))
-            .value
-            ?.blocks
-            .where((b) => b.id == blockId)
-            .firstOrNull;
-        if (b == null) return;
-        final atEnd = kind == 'pinend';
+      case 'pin':
+        // `<minute>:<what>`, the minute worked out when the menu opened.
+        final c = value.indexOf(':');
         await _pin(
-          atEnd ? b.endMin : b.startMin,
-          what: value,
-          title: atEnd ? 'Pin the end' : 'Pin the start',
+          int.parse(value.substring(0, c)),
+          what: value.substring(c + 1),
         );
       case 'group' || 'more':
         if (value == 'tasks') {
@@ -542,19 +535,29 @@ class _DayPageState extends ConsumerState<DayPage> {
   // ── marking menu ───────────────────────────────────────────────────────
 
   /// Pin kinds in [kinds] order, then recent custom texts, then Custom….
-  /// Ids are `<side>:<kind>`, `<side>:text:<text>` or `<side>:custom`.
-  List<MarkingItem> _pinItems(String side, List<PinKind> kinds) {
+  /// Ids are `<prefix>:<kind>`, `<prefix>:text:<text>` or
+  /// `<prefix>:custom`. With [time], the rows say when ("Reach by 11:00").
+  List<MarkingItem> _pinItems(
+    String prefix,
+    List<PinKind> kinds, {
+    String? time,
+  }) {
     final texts = ref.read(recentPinTextsProvider).value ?? const <String>[];
+    final at = time == null ? '' : ' $time';
     return [
       for (final k in kinds)
-        MarkingItem(id: '$side:${k.name}', glyph: k.glyph, label: k.verb),
+        MarkingItem(
+          id: '$prefix:${k.name}',
+          glyph: k.glyph,
+          label: '${k.verb}$at',
+        ),
       for (final t in texts)
-        MarkingItem(id: '$side:text:$t', glyph: '📌', label: t),
-      MarkingItem(id: '$side:custom', glyph: '✏️', label: 'Custom…'),
+        MarkingItem(id: '$prefix:text:$t', glyph: '📌', label: '$t$at'),
+      MarkingItem(id: '$prefix:custom', glyph: '✏️', label: 'Custom…'),
     ];
   }
 
-  List<MarkingItem> _menuItems(String blockId) {
+  List<MarkingItem> _menuItems(String blockId, double u) {
     final settings = ref.read(settingsProvider);
     final ranking = ref.read(quickRankingProvider).value;
     final activities =
@@ -608,22 +611,38 @@ class _DayPageState extends ConsumerState<DayPage> {
         MarkingItem(id: 'label:$l', glyph: '🏷️', label: l, isText: true),
       const MarkingItem(id: 'more:label', glyph: '✏️', label: 'New label…'),
     ];
-    // A pin at the entry's start (left) or end (right). The likeliest kind
-    // comes first, so a straight flick picks it: leave by the start, reach
-    // by the end.
-    final startPins = _pinItems('pinstart', const [
+    // A sideways flick pins the moment held, or the entry's start or end
+    // when held near one. Left lists "leave by" first, right "reach by", so
+    // a straight flick picks it.
+    final block = ref
+        .read(dayPlanProvider(day))
+        .value
+        ?.blocks
+        .where((b) => b.id == blockId)
+        .firstOrNull;
+    final at = block == null
+        ? day.startMin + u.round()
+        : pinSpotInEntry(
+            start: block.startMin,
+            end: block.endMin,
+            held: day.startMin + u,
+            step: ref.read(dialModeProvider).level == DialLevel.hour
+                ? settings.hourSnapStep
+                : settings.snapStep,
+          );
+    final time = formatClock(minuteOfDay(at), use24h: settings.use24h);
+    final leftPins = _pinItems('pin:$at', const [
       PinKind.leaveBy,
       PinKind.meetingAt,
       PinKind.reachBy,
-    ]);
-    final endPins = _pinItems('pinend', const [
+    ], time: time);
+    final rightPins = _pinItems('pin:$at', const [
       PinKind.reachBy,
       PinKind.meetingAt,
       PinKind.leaveBy,
-    ]);
+    ], time: time);
 
-    // Clockwise from the top: tasks up, end pin right, labels down, start
-    // pin left.
+    // Clockwise from the top: tasks up, pins right, labels down, pins left.
     return [
       MarkingItem(
         id: 'group:tasks',
@@ -632,11 +651,11 @@ class _DayPageState extends ConsumerState<DayPage> {
         children: () => taskItems,
       ),
       MarkingItem(
-        id: 'pinend:${PinKind.reachBy.name}',
+        id: 'pin:$at:${PinKind.reachBy.name}',
         glyph: '📍',
-        label: 'Pin the end',
+        label: 'Pin $time',
         asList: true,
-        children: () => endPins,
+        children: () => rightPins,
       ),
       MarkingItem(
         id: 'group:label',
@@ -645,11 +664,11 @@ class _DayPageState extends ConsumerState<DayPage> {
         children: () => labelItems,
       ),
       MarkingItem(
-        id: 'pinstart:${PinKind.leaveBy.name}',
+        id: 'pin:$at:${PinKind.leaveBy.name}',
         glyph: '📍',
-        label: 'Pin the start',
+        label: 'Pin $time',
         asList: true,
-        children: () => startPins,
+        children: () => leftPins,
       ),
     ];
   }
@@ -842,7 +861,7 @@ class _DayPageState extends ConsumerState<DayPage> {
           ? 'Drag along a ring to add an entry.\n'
                 'Inner ring is this hour, outer ring the next.\n'
                 'Tap an entry to move or resize it; hold it for tasks and '
-                'labels, or flick left/right to pin its start/end.\n'
+                'labels, or flick sideways to pin that moment.\n'
                 'Hold an empty spot to pin that moment.\n'
                 'Hold the centre to jump to another hour.'
           : 'Drag along a ring to add an entry.\n'

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -19,6 +21,24 @@ enum PinKind {
 
   static PinKind parse(String name) =>
       values.firstWhere((k) => k.name == name, orElse: () => custom);
+}
+
+/// Where a pin dropped from an entry `[start, end)` lands when held at
+/// minute [held]: that moment, snapped to [step], or the entry's start or
+/// end when held within a few minutes of it (the larger of [step] and a
+/// tenth of the entry, at most 10 minutes), so "Reach by" the end of a
+/// train needs no precise aim.
+int pinSpotInEntry({
+  required int start,
+  required int end,
+  required double held,
+  required int step,
+}) {
+  final edge = math.max(step, math.min(10, (end - start) ~/ 10));
+  final toStart = held - start, toEnd = end - held;
+  if (math.min(toStart, toEnd) <= edge) return toStart <= toEnd ? start : end;
+  final snapped = (held / step).round() * step;
+  return snapped.clamp(start, end);
 }
 
 extension PinText on PinRow {

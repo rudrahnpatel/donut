@@ -6,6 +6,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme/theme.dart';
+import '../../core/time/day_minutes.dart';
+import '../../data/repos/pin_repo.dart';
 import '../clock/clock_painter.dart';
 import '../clock/clock_view.dart';
 import '../clock/spiral_math.dart';
@@ -217,9 +219,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     }
   }
 
-  List<MarkingItem> _menu(String id) {
-    MarkingItem pin(String side, String glyph, String label) =>
-        MarkingItem(id: '$side:$glyph', glyph: glyph, label: label);
+  List<MarkingItem> _menu(String id, double u) {
+    final b = _blocks.where((b) => b.id == id).firstOrNull;
+    final at = b == null
+        ? u.round()
+        : pinSpotInEntry(
+            start: b.start,
+            end: b.end,
+            held: u,
+            step: _spec.isHour ? 5 : 15,
+          );
+    final time = formatClock(
+      ((at % minutesPerDay) + minutesPerDay) % minutesPerDay,
+      use24h: ref.read(settingsProvider).use24h,
+    );
+    MarkingItem pin(String glyph, String verb) =>
+        MarkingItem(id: 'pin:$at:$glyph', glyph: glyph, label: '$verb $time');
     return [
       MarkingItem(
         id: 'group:tasks',
@@ -233,14 +248,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         ],
       ),
       MarkingItem(
-        id: 'pinend:🏁',
+        id: 'pin:$at:🏁',
         glyph: '📍',
-        label: 'Pin the end',
+        label: 'Pin $time',
         asList: true,
-        children: () => [
-          pin('pinend', '🏁', 'Reach by'),
-          pin('pinend', '🤝', 'Meeting at'),
-        ],
+        children: () => [pin('🏁', 'Reach by'), pin('🤝', 'Meeting at')],
       ),
       MarkingItem(
         id: 'group:label',
@@ -268,14 +280,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         ],
       ),
       MarkingItem(
-        id: 'pinstart:🚶',
+        id: 'pin:$at:🚶',
         glyph: '📍',
-        label: 'Pin the start',
+        label: 'Pin $time',
         asList: true,
-        children: () => [
-          pin('pinstart', '🚶', 'Leave by'),
-          pin('pinstart', '🤝', 'Meeting at'),
-        ],
+        children: () => [pin('🚶', 'Leave by'), pin('🤝', 'Meeting at')],
       ),
     ];
   }
@@ -299,9 +308,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
           );
         case 'label':
           _labels[id] = value;
-        case 'pinend' || 'pinstart':
+        case 'pin':
+          final c = value.indexOf(':');
           _pins.add(
-            PaintPin(u: kind == 'pinend' ? b.end : b.start, glyph: value),
+            PaintPin(
+              u: int.parse(value.substring(0, c)),
+              glyph: value.substring(c + 1),
+            ),
           );
       }
     });

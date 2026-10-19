@@ -52,12 +52,14 @@ class TapEmptyEvent extends ClockEvent {
   final double u;
 }
 
-/// Opens the marking menu for block [id] at [position]. With [mouseMode]
-/// the menu stays open after release and is driven by hover and click.
+/// Opens the marking menu for block [id] at [position], held at
+/// day-relative minute [u]. With [mouseMode] the menu stays open after
+/// release and is driven by hover and click.
 class MenuOpenEvent extends ClockEvent {
-  const MenuOpenEvent(this.id, this.position, {this.mouseMode = false});
+  const MenuOpenEvent(this.id, this.position, this.u, {this.mouseMode = false});
   final String id;
   final Offset position;
+  final double u;
   final bool mouseMode;
 }
 
@@ -212,7 +214,7 @@ class ClockGestureMachine {
     if (secondary) {
       emit(
         span != null
-            ? MenuOpenEvent(span.id, p, mouseMode: true)
+            ? MenuOpenEvent(span.id, p, u, mouseMode: true)
             : EmptyHoldEvent(snapMinutes(u, snapStep), p, mouseMode: true),
       );
       _state = const _Idle();
@@ -318,7 +320,7 @@ class ClockGestureMachine {
     } else if (s is _PressedBlock) {
       _state = const _Menu();
       emit(const HapticEvent(HapticKind.hold));
-      emit(MenuOpenEvent(s.span.id, _downPos));
+      emit(MenuOpenEvent(s.span.id, _downPos, s.u));
     } else if (s is _PressedHub) {
       _state = const _Menu();
       emit(const HapticEvent(HapticKind.hold));

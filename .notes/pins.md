@@ -5,10 +5,12 @@
 A pin marks a moment rather than a span: "Reach by 4:55", "Meeting at 5:00", "Leave by
 3:50", or custom text ("train leaves").
 
-- **Making one:** hold an entry, then flick **right** to pin its end or **left** to pin its
-  start. A list opens: the likeliest kind comes first (end → Reach by, start → Leave by),
-  so a straight flick and release is enough. Next come the other kinds, up to three recent
-  custom texts, and *Custom…*.
+- **Making one:** hold an entry and flick **sideways**. The pin goes at the moment you're
+  holding, or at the entry's start or end when held within a few minutes of it (so
+  "Reach by" the end of a train needs no aim). The list's rows show the time ("🏁 Reach by
+  12:30"). Left lists Leave by first and right lists Reach by first, so a straight flick
+  and release is enough. Next come the other kinds, up to three recent custom texts, and
+  *Custom…*.
 - **On an empty spot:** hold an empty part of either ring (or right-click it) and the same
   list opens at that moment, snapped to the dial's step. It stacks upward from the finger
   so the hand doesn't cover it (downward without room above). Reach by comes first; a
@@ -34,8 +36,14 @@ A pin marks a moment rather than a span: "Reach by 4:55", "Meeting at 5:00", "Le
     call them alongside the entry overlay.
   - `watchDraftCount` feeds `draftCountProvider`, so a sketched pin alone keeps plan mode
     open.
-- **Menu:** the hold menu's split root has four items, clockwise from the top: Tasks, end
-  pin, Label, start pin. The pin items carry `asList: true`, so their kinds open as a list
+- **Menu:** the hold menu's split root has four items, clockwise from the top: Tasks, pin,
+  Label, pin.
+  - `MenuOpenEvent` carries the held minute `u`, and `ClockView.menuItems(blockId, u)`
+    passes it on.
+  - `pinSpotInEntry` (`pin_repo.dart`) places the pin. The edge zone is the larger of the
+    snap step and a tenth of the entry, at most 10 minutes; held further in, the time is
+    snapped to the step.
+  - The minute is encoded in the item ids (`pin:<minute>:<kind>`). The pin items carry `asList: true`, so their kinds open as a list
   (see `marking_menu_and_hour_picker.md`). Releasing on a pin item without choosing a row
   takes its default kind (the item's id is that kind). `DayPage._pin` reads the entry's
   start or end time and asks for text for *Custom…*.
@@ -73,10 +81,12 @@ flowchart LR
   ("empty space pe toh bhi aana chahiye"), for a moment not tied to an entry. The hold
   uses the same 300 ms as entries; drawing starts with movement, so a quick drag still
   draws.
-- The user asked for pins "for reach by, meeting at, etc" on hold + left/right, and chose
-  (from options) start/end of the held entry rather than the pressed point or a hold on
-  empty ring. Start/end needs no aiming and fits the travel use case: leave by the start
-  of "home to stn", reach by the end of "train".
+- The user asked for pins "for reach by, meeting at, etc" on hold + left/right.
+  - **First version:** left pinned the entry's start and right its end. Then the user
+    wanted a pin in the middle of a long entry (a meeting inside "Work 10:00–12:30"),
+    which that couldn't do.
+  - **Now:** they chose "where I held", with snapping near the edges so start and end pins
+    stay effortless.
 - **A separate table, not zero-length entries.** Entries assume a span (overlap lanes,
   handles, the edit overlay, calendar events). Pins are independent of the entry they were
   dropped on, so re-planning entries around a deadline doesn't move the deadline.

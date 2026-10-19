@@ -154,6 +154,7 @@ void main() {
       expect(h.machine.wantsHoldTimer, isTrue);
       h.machine.holdElapsed();
       expect(h.last<MenuOpenEvent>().id, 'a');
+      expect(h.last<MenuOpenEvent>().u, closeTo(630, 1), reason: 'held');
       h.machine.move(p + const Offset(0, -90));
       h.machine.up();
       expect(h.last<MenuReleaseEvent>().position, p + const Offset(0, -90));

@@ -98,7 +98,9 @@ class ClockView extends StatefulWidget {
   final void Function(int start, int end) onCreate;
   final void Function(String id, int start, int end) onChange;
   final void Function(String? id) onSelect;
-  final List<MarkingItem> Function(String blockId) menuItems;
+
+  /// The hold menu for block [blockId], held at day-relative minute `u`.
+  final List<MarkingItem> Function(String blockId, double u) menuItems;
   final void Function(String blockId, MarkingItem item) onMenuPick;
   final Color? Function(MarkingItem item)? menuItemColor;
 
@@ -223,7 +225,7 @@ class _ClockViewState extends State<ClockView>
       case HubHoldEvent():
         _openPicker(mouse: e.mouseMode);
       case MenuOpenEvent():
-        _openMenu(e.id, _toGlobal(e.position), mouse: e.mouseMode);
+        _openMenu(e.id, e.u, _toGlobal(e.position), mouse: e.mouseMode);
       case EmptyHoldEvent():
         _openPinMenu(e.u, _toGlobal(e.position), mouse: e.mouseMode);
       case MenuMoveEvent():
@@ -298,13 +300,18 @@ class _ClockViewState extends State<ClockView>
     );
   }
 
-  void _openMenu(String blockId, Offset global, {required bool mouse}) {
+  void _openMenu(
+    String blockId,
+    double u,
+    Offset global, {
+    required bool mouse,
+  }) {
     _menuBlockId = blockId;
     _menuMouse = mouse;
     _menuPointer = global;
     _menu = MarkingMenuController(
       origin: global,
-      rootItems: widget.menuItems(blockId),
+      rootItems: widget.menuItems(blockId, u),
       bounds: _screenBounds(),
       onHighlight: HapticFeedback.selectionClick,
       // Tasks up, labels down.
