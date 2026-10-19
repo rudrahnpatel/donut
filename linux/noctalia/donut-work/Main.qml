@@ -43,7 +43,7 @@ Item {
   property bool manual: false
   // The last tick: did it count as work, and why.
   property bool working: false
-  property string reason: ""
+  property string reason: "starting…"
   property var claudeProjects: []
   // Bumped on every change so the derived values recompute.
   property int revision: 0
