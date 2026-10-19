@@ -61,6 +61,9 @@ flowchart LR
 - **Ghost finger, not text:** the dial's gestures (drag, hold and flick, tap to zoom)
   are invisible until tried, so the tour shows each one moving on the real dial and asks
   you to do it.
+- **The zoom hint taps an empty spot** (`emptyHourSpot`), and in that step a tap on an
+  entry zooms too. On the phone the hint tapped 4:30 PM right where a practice entry
+  was, so following it selected the entry and the step seemed broken.
 - **Practice state is local**, so nothing drawn in the tour lands in the plan or syncs.
 - **The flag is per device**, so a new phone gets the tour even when its plan arrives
   through sync.
