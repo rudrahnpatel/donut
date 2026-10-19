@@ -4,15 +4,17 @@ import QtQuick.Controls
 import qs.Commons
 import qs.Widgets
 
-// Today's work: the total, what is counting right now, a manual start /
-// stop, time per project, and each session (drop ones that weren't work).
+// Today's work: the total (and personal time beside it), what is counting
+// right now, a manual start / stop, every project as a chip you click to
+// switch between work and personal (the day recounts), and the work
+// sessions with their split (drop one that wasn't work at all).
 Item {
   id: root
 
   property var pluginApi: null
   readonly property var geometryPlaceholder: panelContainer
-  property real contentPreferredWidth: 380 * Style.uiScaleRatio
-  property real contentPreferredHeight: 460 * Style.uiScaleRatio
+  property real contentPreferredWidth: 400 * Style.uiScaleRatio
+  property real contentPreferredHeight: 520 * Style.uiScaleRatio
   readonly property bool allowAttach: true
 
   anchors.fill: parent
@@ -20,8 +22,11 @@ Item {
   readonly property var main: pluginApi?.mainInstance
 
   function clock(ms) {
-    const d = new Date(ms);
-    return d.toLocaleTimeString(Qt.locale(), "h:mm ap");
+    return new Date(ms).toLocaleTimeString(Qt.locale(), "h:mm ap");
+  }
+
+  function names(bucket) {
+    return Object.keys(bucket || {}).sort((a, b) => bucket[b] - bucket[a]);
   }
 
   Rectangle {
@@ -40,17 +45,29 @@ Item {
         color: Color.mOnSurfaceVariant
       }
 
-      NText {
-        text: root.main ? root.main.formatDuration(root.main.todaySeconds) : "–"
-        pointSize: Style.fontSizeXXL * 1.4
-        font.weight: Style.fontWeightBold
+      RowLayout {
+        spacing: Style.marginL
+
+        NText {
+          text: root.main ? root.main.formatDuration(root.main.todaySeconds) : "–"
+          pointSize: Style.fontSizeXXL * 1.4
+          font.weight: Style.fontWeightBold
+        }
+
+        NText {
+          visible: root.main && root.main.personalSeconds > 0
+          text: root.main ? "+ " + root.main.formatDuration(root.main.personalSeconds) + " personal" : ""
+          color: Color.mOnSurfaceVariant
+          Layout.alignment: Qt.AlignBottom
+          Layout.bottomMargin: Style.marginXS
+        }
       }
 
       NText {
         Layout.fillWidth: true
         wrapMode: Text.WordWrap
         color: root.main && root.main.working ? Color.mPrimary : Color.mOnSurfaceVariant
-        text: !root.main ? "" : root.main.working ? "● Counting · " + root.main.reason : "○ Not counting · " + root.main.reason
+        text: !root.main ? "" : (root.main.working ? "● Counting · " : "○ Not counting · ") + root.main.reason
       }
 
       NButton {
@@ -64,76 +81,52 @@ Item {
         Layout.fillWidth: true
       }
 
-      // Time per project.
+      NText {
+        text: "Projects · click to switch work / personal"
+        pointSize: Style.fontSizeS
+        color: Color.mOnSurfaceVariant
+      }
+
       Flow {
         Layout.fillWidth: true
         spacing: Style.marginS
 
         Repeater {
-          model: {
-            if (!root.main)
-              return [];
-            const p = root.main.projectSeconds;
-            return Object.keys(p).sort((a, b) => p[b] - p[a]).map(k => ({
-                  "name": k,
-                  "seconds": p[k]
-                }));
-          }
+          model: root.main ? root.names(root.main.projectSeconds) : []
 
           delegate: Rectangle {
-            required property var modelData
+            id: chip
+            required property string modelData
+            readonly property bool personal: root.main.isPersonal(modelData)
             radius: Style.radiusM
-            color: Color.mSurfaceVariant
-            implicitWidth: chipRow.implicitWidth + Style.marginM * 2
-            implicitHeight: chipRow.implicitHeight + Style.marginS * 2
+            color: chipMouse.containsMouse ? Color.mHover : personal ? "transparent" : Qt.alpha(Color.mPrimary, 0.18)
+            border.width: personal ? 1 : 0
+            border.color: Color.mOutline
+            implicitWidth: chipText.implicitWidth + Style.marginM * 2
+            implicitHeight: chipText.implicitHeight + Style.marginS * 2
 
-            RowLayout {
-              id: chipRow
+            NText {
+              id: chipText
               anchors.centerIn: parent
-              spacing: Style.marginXS
+              pointSize: Style.fontSizeS
+              font.strikeout: chip.personal
+              color: chipMouse.containsMouse ? Color.mOnHover : chip.personal ? Color.mOnSurfaceVariant : Color.mOnSurface
+              text: (chip.personal ? "personal · " : "") + chip.modelData + " · " + root.main.formatDuration(root.main.projectSeconds[chip.modelData] || 0)
+            }
 
-              NText {
-                text: modelData.name + " · " + root.main.formatDuration(modelData.seconds)
-                pointSize: Style.fontSizeS
-              }
-
-              NIconButton {
-                icon: "user-off"
-                baseSize: Style.baseWidgetSize * 0.6
-                tooltipText: "Personal project: stop counting it"
-                onClicked: root.main.setPersonal(modelData.name, true)
-              }
+            MouseArea {
+              id: chipMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: root.main.setPersonal(chip.modelData, !chip.personal)
             }
           }
         }
       }
 
-      // Personal projects, click one to count it again.
-      Flow {
-        Layout.fillWidth: true
-        spacing: Style.marginS
-        visible: root.main && root.main.personalProjects.length > 0
-
-        NText {
-          text: "Personal:"
-          pointSize: Style.fontSizeS
-          color: Color.mOnSurfaceVariant
-        }
-
-        Repeater {
-          model: root.main ? root.main.personalProjects : []
-
-          delegate: NButton {
-            required property string modelData
-            text: modelData + "  ×"
-            fontSize: Style.fontSizeS
-            onClicked: root.main.setPersonal(modelData, false)
-          }
-        }
-      }
-
       NText {
-        text: "Sessions"
+        text: "Work sessions"
         pointSize: Style.fontSizeS
         color: Color.mOnSurfaceVariant
       }
@@ -147,11 +140,10 @@ Item {
           spacing: Style.marginS
 
           Repeater {
-            model: root.main ? (root.main.revision, root.main.sessions.slice().reverse()) : []
+            model: root.main ? root.main.sessions.slice().reverse() : []
 
             delegate: RowLayout {
               required property var modelData
-              required property int index
               Layout.fillWidth: true
 
               ColumnLayout {
@@ -164,18 +156,26 @@ Item {
                 }
 
                 NText {
-                  text: Object.keys(modelData.projects).join(", ") + (modelData.manual ? " · manual" : "")
-                  color: Color.mOnSurfaceVariant
-                  pointSize: Style.fontSizeS
-                  elide: Text.ElideRight
                   Layout.fillWidth: true
+                  elide: Text.ElideRight
+                  pointSize: Style.fontSizeS
+                  text: root.names(modelData.projects).join(", ")
+                }
+
+                NText {
+                  visible: Object.keys(modelData.personal || {}).length > 0
+                  Layout.fillWidth: true
+                  elide: Text.ElideRight
+                  pointSize: Style.fontSizeS
+                  color: Color.mOnSurfaceVariant
+                  text: "alongside, personal: " + root.names(modelData.personal).join(", ")
                 }
               }
 
               NIconButton {
                 icon: "trash"
-                tooltipText: "Not work: drop this session"
-                onClicked: root.main.discard(root.main.sessions.length - 1 - index)
+                tooltipText: "Not work at all: drop this span"
+                onClicked: root.main.discard(modelData)
               }
             }
           }

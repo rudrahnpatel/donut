@@ -4,17 +4,19 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 
-// Donut Work: counts working time by itself, every 30 s.
+// Donut Work: notes what you are working on every 30 s.
 //
-// Working means a manual session is on, or Claude Code wrote to a session
-// log in the last 2 minutes (busy in that project), or you are active
-// (input within `idleMinutes`) in a coding app or on a work site in a
-// browser. Ticks closer together than `idleMinutes` make one session.
-// Personal projects never count: Claude Code busy only in them means you
-// are on your own time, even in a coding app.
+// A tick records the projects busy at that moment: those Claude Code wrote
+// a session log for in the last 2 minutes, else the coding app you are
+// active in (input within `idleMinutes`), plus "manual" while a manual
+// session is on. Ticks are kept raw, so calling a project personal (or
+// work again) recounts the whole day at once.
 //
-// Sessions are saved per day to ~/.local/share/donut/work/YYYY-MM-DD.json,
-// which the Donut app reads to draw them on its dial.
+// Work time is derived: ticks with at least one work project, joined into
+// sessions when closer than `idleMinutes`. Ticks with only personal
+// projects are personal time. The day file at
+// ~/.local/share/donut/work/YYYY-MM-DD.json keeps the raw ticks plus the
+// derived work sessions, which the Donut app reads for its dial.
 Item {
   id: root
 
@@ -31,36 +33,39 @@ Item {
   readonly property int tickMs: 30000
   readonly property string dataDir: Quickshell.env("HOME") + "/.local/share/donut/work"
 
-  // Today's sessions: [{start, end (epoch ms), manual, projects: {name: seconds}}].
-  property var sessions: []
+  // Raw ticks: [epoch ms, [projects]], and spans dropped as not work at all.
+  property var ticks: []
+  property var excluded: []
   property string dayKey: ""
+  // Whether today's file has been read back (once per day).
+  property bool restored: false
   // A session started by hand stays on until stopped.
   property bool manual: false
-  // Whether the last tick counted, and why ("Claude Code · timemng", "kitty").
+  // The last tick: did it count as work, and why.
   property bool working: false
   property string reason: ""
-  // Projects Claude Code is busy in, from the last scan.
   property var claudeProjects: []
-  // Bumped on every change so bindings on the derived totals update.
+  // Bumped on every change so the derived values recompute.
   property int revision: 0
 
-  readonly property int todaySeconds: {
+  // Derived from the ticks with the current work/personal split.
+  readonly property var day: {
     revision;
-    let ms = 0;
-    for (const s of sessions) ms += s.end - s.start;
-    return Math.round(ms / 1000);
+    personalProjects;
+    return derive();
   }
-
-  readonly property var projectSeconds: {
-    revision;
-    const out = {};
-    for (const s of sessions)
-      for (const p in s.projects) out[p] = (out[p] || 0) + s.projects[p];
-    return out;
-  }
+  readonly property var sessions: day.sessions
+  readonly property int todaySeconds: day.workSeconds
+  readonly property int personalSeconds: day.personalSeconds
+  // Project → seconds over the day, personal ones included.
+  readonly property var projectSeconds: day.projectSeconds
 
   function splitList(text) {
     return text.split(",").map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
+  }
+
+  function isPersonal(project) {
+    return personalProjects.indexOf(project.toLowerCase()) >= 0;
   }
 
   function pad(n) {
@@ -72,14 +77,59 @@ Item {
     return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   }
 
-  function fileFor(key) {
-    return dataDir + "/" + key + ".json";
-  }
-
   function formatDuration(seconds) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return h > 0 ? h + "h " + pad(m) + "m" : m + "m";
+  }
+
+  function isExcluded(ms) {
+    return excluded.some(r => ms > r[0] && ms <= r[1]);
+  }
+
+  // Work sessions, work and personal seconds, and per-project seconds.
+  function derive() {
+    const gap = idleMinutes * 60000 + tickMs;
+    const sessions = [];
+    const projectSeconds = {};
+    let personal = 0;
+    let last = null;
+    for (const [ms, projects] of ticks) {
+      if (isExcluded(ms))
+        continue;
+      for (const p of projects)
+        projectSeconds[p] = (projectSeconds[p] || 0) + tickMs / 1000;
+      const work = projects.filter(p => !isPersonal(p));
+      if (work.length === 0) {
+        personal += tickMs / 1000;
+        continue;
+      }
+      if (!last || ms - last.end > gap) {
+        last = {
+          "start": ms - tickMs,
+          "end": ms,
+          "manual": false,
+          "projects": {},
+          "personal": {}
+        };
+        sessions.push(last);
+      }
+      last.end = ms;
+      last.manual = last.manual || projects.indexOf("manual") >= 0;
+      for (const p of projects) {
+        const bucket = isPersonal(p) ? last.personal : last.projects;
+        bucket[p] = (bucket[p] || 0) + tickMs / 1000;
+      }
+    }
+    let workMs = 0;
+    for (const s of sessions)
+      workMs += s.end - s.start;
+    return {
+      "sessions": sessions,
+      "workSeconds": Math.round(workMs / 1000),
+      "personalSeconds": personal,
+      "projectSeconds": projectSeconds
+    };
   }
 
   // ── inputs ──────────────────────────────────────────────────────────────
@@ -118,7 +168,7 @@ Item {
     }
   }
 
-  // ── sessions ────────────────────────────────────────────────────────────
+  // ── ticks ───────────────────────────────────────────────────────────────
 
   function tick() {
     const now = Date.now();
@@ -126,46 +176,25 @@ Item {
     const top = ToplevelManager.activeToplevel;
     const appId = top ? top.appId : "";
     const active = !idle.isIdle;
-    const busy = countClaude ? claudeProjects : [];
-    const claude = busy.filter(p => !isPersonal(p));
-    const personalOnly = busy.length > 0 && claude.length === 0;
+    const claude = countClaude ? claudeProjects : [];
     let projects = [];
-    if (manual) {
-      reason = "Manual session";
-      projects = claude.length > 0 ? claude : ["manual"];
-    } else if (claude.length > 0) {
-      reason = "Claude Code · " + claude.join(", ");
-      projects = claude;
-    } else if (personalOnly) {
-      reason = "Personal · " + busy.join(", ");
-    } else if (active && isWorkApp(appId, top ? top.title : "")) {
-      reason = appId;
+    if (claude.length > 0)
+      projects = claude.slice();
+    else if (active && isWorkApp(appId, top ? top.title : ""))
       projects = [appId];
-    } else {
-      reason = active ? "Not a work app" : "Idle";
-    }
-    working = projects.length > 0;
+    if (manual)
+      projects.push("manual");
+    const work = projects.filter(p => !isPersonal(p));
+    working = work.length > 0;
     if (working)
-      record(now, projects);
-  }
-
-  function record(now, projects) {
-    const gap = idleMinutes * 60000 + tickMs;
-    let last = sessions.length > 0 ? sessions[sessions.length - 1] : null;
-    if (!last || now - last.end > gap) {
-      last = {
-        "start": now - tickMs,
-        "end": now,
-        "manual": manual,
-        "projects": {}
-      };
-      sessions.push(last);
-    } else {
-      last.end = now;
-      last.manual = last.manual || manual;
-    }
-    for (const p of projects)
-      last.projects[p] = (last.projects[p] || 0) + tickMs / 1000;
+      reason = (claude.length > 0 ? "Claude Code · " : "") + work.join(", ");
+    else if (projects.length > 0)
+      reason = "Personal · " + projects.join(", ");
+    else
+      reason = active ? "Not a work app" : "Idle";
+    if (projects.length === 0)
+      return;
+    ticks.push([now, projects]);
     save();
   }
 
@@ -174,40 +203,35 @@ Item {
     if (key === dayKey)
       return;
     dayKey = key;
-    sessions = [];
+    restored = false;
+    ticks = [];
+    excluded = [];
     revision++;
-    dayFile.path = fileFor(key);
+    dayFile.path = dataDir + "/" + key + ".json";
   }
 
   function save() {
     revision++;
     dayFile.setText(JSON.stringify({
-      "v": 1,
+      "v": 2,
       "day": dayKey,
-      "sessions": sessions
-    }, null, 1));
+      "sessions": sessions,
+      "excluded": excluded,
+      "ticks": ticks
+    }));
   }
 
-  function isPersonal(project) {
-    return personalProjects.indexOf(project.toLowerCase()) >= 0;
-  }
-
-  // Marks [project] personal: it stops counting, and today's sessions spent
-  // only on it go. (A session shared with other work keeps its time.)
+  // Makes [project] personal (or work again); the day recounts.
   function setPersonal(project, personal) {
     if (!pluginApi)
       return;
-    let list = personalProjects.filter(p => p !== project.toLowerCase());
+    const name = project.toLowerCase();
+    const list = personalProjects.filter(p => p !== name);
     if (personal)
-      list.push(project.toLowerCase());
+      list.push(name);
     pluginApi.pluginSettings.personalProjects = list.join(", ");
     pluginApi.saveSettings();
-    if (!personal)
-      return;
-    for (const s of sessions)
-      delete s.projects[project];
-    sessions = sessions.filter(s => Object.keys(s.projects).length > 0);
-    save();
+    Qt.callLater(save);
   }
 
   function toggleManual() {
@@ -215,22 +239,47 @@ Item {
     tick();
   }
 
-  // Drops a session that wasn't work (from the panel).
-  function discard(index) {
-    sessions.splice(index, 1);
+  // Drops a work session's span entirely (it wasn't work at all).
+  function discard(session) {
+    excluded.push([session.start, session.end]);
     save();
+  }
+
+  // Version 1 files kept only sessions with per-project seconds. Each
+  // becomes evenly spread ticks: a project busy for n of the session's N
+  // slots is put in n of them, spaced out.
+  function ticksFromSessions(old) {
+    const out = [];
+    for (const s of old) {
+      const n = Math.max(1, Math.round((s.end - s.start) / tickMs));
+      const counts = {};
+      for (const p in s.projects)
+        counts[p] = Math.min(n, Math.round(s.projects[p] / (tickMs / 1000)));
+      for (let i = 0; i < n; i++) {
+        const busy = Object.keys(counts).filter(p => (i * counts[p]) % n < counts[p]);
+        if (busy.length > 0)
+          out.push([s.start + (i + 1) * tickMs, busy]);
+      }
+    }
+    return out;
   }
 
   FileView {
     id: dayFile
-    // Picks up today's sessions after a shell restart.
+    // Picks up today after a shell restart.
     onLoaded: {
+      if (root.restored)
+        return;
+      root.restored = true;
       try {
         const data = JSON.parse(text());
-        if (data.day === root.dayKey && Array.isArray(data.sessions)) {
-          root.sessions = data.sessions.concat(root.sessions.filter(s => s.start > Date.now() - root.tickMs * 2));
-          root.revision++;
-        }
+        if (data.day !== root.dayKey)
+          return;
+        const saved = Array.isArray(data.ticks) ? data.ticks : root.ticksFromSessions(data.sessions || []);
+        const since = saved.length > 0 ? saved[saved.length - 1][0] : 0;
+        root.ticks = saved.concat(root.ticks.filter(t => t[0] > since));
+        root.excluded = data.excluded || [];
+        root.save();
       } catch (e) {
         Logger.w("DonutWork", "Could not read", path, e);
       }
@@ -267,7 +316,7 @@ Item {
     }
 
     function status(): string {
-      return root.formatDuration(root.todaySeconds) + (root.working ? " · " + root.reason : "");
+      return root.formatDuration(root.todaySeconds) + " work, " + root.formatDuration(root.personalSeconds) + " personal · " + root.reason;
     }
   }
 }
