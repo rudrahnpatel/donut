@@ -199,6 +199,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     }
   });
 
+  /// In the zoom step a tap on an entry zooms into its hour too, so
+  /// following the hint can't dead-end on a selection.
+  void _onSelect(String? id) {
+    final b = _blocks.where((b) => b.id == id).firstOrNull;
+    if (_step == _Step.zoom && !_spec.isHour && b != null) {
+      _onTapEmpty(b.start.toDouble());
+      return;
+    }
+    setState(() => _selected = id);
+  }
+
   void _markHeld() {
     if (_step == _Step.hold && !_held) {
       _held = true;
@@ -457,8 +468,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             )
           : (
               'Zoom into an hour',
-              'Tap any hour to plan minute by minute: get ready at 4:05, '
-                  'leave at 4:10, train at 4:15.',
+              'Tap an empty spot on any hour to plan it minute by minute: '
+                  'get ready at 4:05, leave at 4:10, train at 4:15.',
             ),
     _Step.plan => (
       'A sketchpad for what-ifs',
@@ -545,7 +556,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       ),
       onCreate: _onCreate,
       onChange: _onChange,
-      onSelect: (id) => setState(() => _selected = id),
+      onSelect: _onSelect,
       onTapEmpty: _onTapEmpty,
       onHubTap: () => setState(() {
         _selected = null;
@@ -612,7 +623,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _Step.zoom when !_zoomed && !_spec.isHour => GhostFinger(
         move: GhostMove.tap,
         spec: _spec,
-        from: 16 * 60 + 30,
+        from: emptyHourSpot([for (final b in _blocks) (b.start, b.end)]),
       ),
       _ => null,
     };
@@ -667,6 +678,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       ),
     ];
   }
+}
+
+/// A day-relative minute in the middle of an hour no span covers (within
+/// 10 minutes either side), for the zoom hint to tap: a tap on an entry
+/// would select it instead. Prefers the afternoon, then the morning.
+@visibleForTesting
+int emptyHourSpot(List<(int, int)> spans) {
+  const hours = [16, 10, 15, 11, 20, 9, 14, 21, 8, 13, 19, 7, 12, 18, 6];
+  for (final h in hours) {
+    final m = h * 60 + 30;
+    if (!spans.any((s) => s.$1 < m + 10 && s.$2 > m - 10)) return m;
+  }
+  return 16 * 60 + 30;
 }
 
 /// The practice dial's hub text, above the clock's pivot.
