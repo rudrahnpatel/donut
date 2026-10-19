@@ -6,8 +6,9 @@ import '../../core/time/day_minutes.dart';
 import '../../data/repos/block_repo.dart';
 import '../../data/repos/plan_tools_repo.dart';
 import '../day/pickers.dart';
+import '../day/running_late.dart';
 
-enum _DayAction { copyYesterday, applyTemplate, saveTemplate }
+enum _DayAction { runningLate, copyYesterday, applyTemplate, saveTemplate }
 
 /// Overflow menu on the day header: templates and "copy yesterday".
 class DayMenuButton extends ConsumerWidget {
@@ -32,6 +33,8 @@ class DayMenuButton extends ConsumerWidget {
       icon: const Icon(Icons.auto_awesome_rounded),
       onSelected: (a) async {
         switch (a) {
+          case _DayAction.runningLate:
+            await runLate(context, ref);
           case _DayAction.copyYesterday:
             snack(added(await tools.copyFrom(day.addDays(-1), day)));
           case _DayAction.applyTemplate:
@@ -69,22 +72,30 @@ class DayMenuButton extends ConsumerWidget {
             snack('Saved template “${name.trim()}”');
         }
       },
-      itemBuilder: (_) => const [
-        PopupMenuItem(
+      itemBuilder: (_) => [
+        if (day == ref.read(todayProvider))
+          const PopupMenuItem(
+            value: _DayAction.runningLate,
+            child: ListTile(
+              leading: Icon(Icons.running_with_errors_rounded),
+              title: Text('Running late…'),
+            ),
+          ),
+        const PopupMenuItem(
           value: _DayAction.copyYesterday,
           child: ListTile(
             leading: Icon(Icons.content_copy_rounded),
             title: Text('Copy yesterday'),
           ),
         ),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: _DayAction.applyTemplate,
           child: ListTile(
             leading: Icon(Icons.dashboard_customize_rounded),
             title: Text('Apply template…'),
           ),
         ),
-        PopupMenuItem(
+        const PopupMenuItem(
           value: _DayAction.saveTemplate,
           child: ListTile(
             leading: Icon(Icons.bookmark_add_rounded),

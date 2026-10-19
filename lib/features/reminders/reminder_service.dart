@@ -176,6 +176,15 @@ class ReminderService {
   /// can be taken down.
   final _shownLive = <int>{};
 
+  /// The last notification button tapped (e.g. `late:10`), for the day
+  /// screen to act on; it resets it to null once handled. Buttons open
+  /// the app, so it is on screen to show what changed.
+  final action = ValueNotifier<String?>(null);
+
+  void _onResponse(NotificationResponse r) {
+    if (r.actionId != null) action.value = r.actionId;
+  }
+
   /// A countdown: stays up, the system ticks the time left, and it goes
   /// away when the entry ends. [from] is when it appears.
   NotificationDetails _liveDetails(Reminder r, int from) {
@@ -197,6 +206,20 @@ class ReminderService {
         when: ends.millisecondsSinceEpoch,
         timeoutAfter: math.max(1, r.untilMin! - from) * 60000,
         category: AndroidNotificationCategory.progress,
+        actions: const [
+          AndroidNotificationAction(
+            'late:5',
+            '+5 min late',
+            showsUserInterface: true,
+            cancelNotification: false,
+          ),
+          AndroidNotificationAction(
+            'late:10',
+            '+10 min late',
+            showsUserInterface: true,
+            cancelNotification: false,
+          ),
+        ],
       ),
       linux: const LinuxNotificationDetails(),
     );
@@ -228,7 +251,14 @@ class ReminderService {
         android: AndroidInitializationSettings('ic_stat_donut'),
         linux: LinuxInitializationSettings(defaultActionName: 'Open Donut'),
       ),
+      onDidReceiveNotificationResponse: _onResponse,
     );
+    // A button that launched the app from closed.
+    final launch = await _plugin.getNotificationAppLaunchDetails();
+    final response = launch?.notificationResponse;
+    if ((launch?.didNotificationLaunchApp ?? false) && response != null) {
+      _onResponse(response);
+    }
     _ready = true;
     if (!_android) {
       _ticker = Timer.periodic(const Duration(seconds: 30), (_) => _fireDue());
@@ -324,5 +354,8 @@ class ReminderService {
     _lastCheck = now;
   }
 
-  void dispose() => _ticker?.cancel();
+  void dispose() {
+    _ticker?.cancel();
+    action.dispose();
+  }
 }

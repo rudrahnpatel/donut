@@ -17,7 +17,9 @@ import '../clock/spiral_math.dart';
 import '../radial_menu/marking_menu_controller.dart';
 import '../sync/sync_controller.dart';
 import '../templates/day_actions.dart';
+import '../reminders/reminder_providers.dart';
 import 'plan_mode.dart';
+import 'running_late.dart';
 import 'agenda_list.dart';
 import 'dial_mode.dart';
 import 'pickers.dart';
@@ -34,11 +36,34 @@ class _DayScreenState extends ConsumerState<DayScreen> {
   late final PageController _pages = PageController(
     initialPage: ref.read(focusedDayProvider).epochDay,
   );
+  late final _notificationAction = ref.read(reminderServiceProvider).action;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationAction.addListener(_onNotificationAction);
+    // A button may have opened the app before this screen was built.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _onNotificationAction(),
+    );
+  }
 
   @override
   void dispose() {
+    _notificationAction.removeListener(_onNotificationAction);
     _pages.dispose();
     super.dispose();
+  }
+
+  /// "+5 min late" / "+10 min late" on a countdown notification.
+  void _onNotificationAction() {
+    final a = _notificationAction.value;
+    if (a == null || !mounted) return;
+    _notificationAction.value = null;
+    if (a.startsWith('late:')) {
+      _toNow();
+      runLate(context, ref, delay: int.parse(a.substring(5)));
+    }
   }
 
   void _goTo(Day d) {
