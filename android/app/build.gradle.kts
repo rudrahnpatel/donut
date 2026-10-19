@@ -31,6 +31,14 @@ android {
         versionName = flutter.versionName
     }
 
+    // Compress native libraries inside the APK: about half the download for a
+    // sideloaded app (they're unpacked once at install).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
