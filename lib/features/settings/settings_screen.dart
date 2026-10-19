@@ -17,6 +17,16 @@ const _seedChoices = [
   0xFFAB47BC,
 ];
 
+/// Asks for notification permission; when Android won't show the prompt
+/// any more, opens Donut's notification settings instead.
+Future<void> _allowNotifications(WidgetRef ref) async {
+  final service = ref.read(reminderServiceProvider);
+  if (!await service.requestPermission()) {
+    await service.openNotificationSettings();
+  }
+  ref.invalidate(notificationsAllowedProvider);
+}
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -186,13 +196,27 @@ class SettingsScreen extends ConsumerWidget {
                     'Plan-mode sketches stay quiet until you tick ✓',
                   ),
                   value: s.remindersEnabled,
-                  onChanged: (v) {
-                    if (v) {
-                      ref.read(reminderServiceProvider).requestPermission();
-                    }
+                  onChanged: (v) async {
                     set(s.copyWith(remindersEnabled: v));
+                    if (v) await _allowNotifications(ref);
                   },
                 ),
+                if (s.remindersEnabled &&
+                    ref.watch(notificationsAllowedProvider).value == false)
+                  ListTile(
+                    leading: Icon(
+                      Icons.notifications_off_rounded,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    title: const Text('Notifications are blocked'),
+                    subtitle: const Text(
+                      "Reminders can't show until Donut is allowed to notify.",
+                    ),
+                    trailing: FilledButton.tonal(
+                      onPressed: () => _allowNotifications(ref),
+                      child: const Text('Allow'),
+                    ),
+                  ),
                 ListTile(
                   enabled: s.remindersEnabled,
                   title: const Text('Notify'),

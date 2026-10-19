@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../core/time/day_minutes.dart';
@@ -125,12 +126,22 @@ class ReminderService {
 
   Future<void> init() async {
     if (_ready) return;
+    // The full database, links included: phones may report old names such
+    // as "Asia/Calcutta" for Asia/Kolkata.
+    tzdata.initializeTimeZones();
     try {
-      tzdata.initializeTimeZones();
       final local = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(local.identifier));
     } catch (e) {
-      debugPrint('Reminders: timezone lookup failed ($e); using UTC');
+      // Any zone at the phone's current offset beats UTC.
+      final offset = DateTime.now().timeZoneOffset;
+      final match = tz.timeZoneDatabase.locations.values
+          .where((l) => l.currentTimeZone.offset == offset)
+          .firstOrNull;
+      if (match != null) tz.setLocalLocation(match);
+      debugPrint(
+        'Reminders: timezone lookup failed ($e); using ${match?.name}',
+      );
     }
     await _plugin.initialize(
       settings: const InitializationSettings(
@@ -144,14 +155,29 @@ class ReminderService {
     }
   }
 
-  /// Asks for notification permission (Android 13+); harmless elsewhere.
-  Future<void> requestPermission() async {
+  AndroidFlutterLocalNotificationsPlugin? get _androidPlugin => _plugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >();
+
+  /// Asks for notification permission (Android 13+); true elsewhere.
+  /// False when refused, including when Android no longer shows the prompt.
+  Future<bool> requestPermission() async {
+    if (!_android) return true;
+    return await _androidPlugin?.requestNotificationsPermission() ?? false;
+  }
+
+  /// Whether notifications can show; null when unknown (not Android).
+  Future<bool?> notificationsAllowed() async {
+    if (!_android) return null;
+    return _androidPlugin?.areNotificationsEnabled();
+  }
+
+  /// Donut's notification settings, for when the prompt no longer shows.
+  Future<void> openNotificationSettings() async {
     if (!_android) return;
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
+    await const MethodChannel('donut/system')
+        .invokeMethod<void>('openNotificationSettings');
   }
 
   /// Replaces every scheduled reminder with [reminders].

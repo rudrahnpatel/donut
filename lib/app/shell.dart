@@ -64,6 +64,8 @@ class _AppShellState extends ConsumerState<AppShell>
     switch (state) {
       case AppLifecycleState.resumed:
         _onNewDay();
+        // Notification permission may have changed in system settings.
+        ref.invalidate(notificationsAllowedProvider);
         sync.setForeground(true);
         sync.syncNow();
       case AppLifecycleState.hidden || AppLifecycleState.paused:

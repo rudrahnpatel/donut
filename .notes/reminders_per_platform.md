@@ -56,5 +56,21 @@ flowchart LR
 - Google Calendar's own reminders are switched off on mirrored events
   (`useDefault: false`) so you aren't notified twice.
 
-**Not yet verified on a device:** both platforms build and the planner is unit-tested, but
-no notification has been seen firing on the phone yet.
+**Two release-only bugs, found on the phone** (reminders had never worked there):
+
+- **Icon shrunk away.** Resource shrinking removed `ic_stat_donut`, which only Dart refers
+  to by name. `initialize` threw `invalid_icon`, so nothing was scheduled and the
+  permission prompt (requested after it) never showed. `res/raw/keep.xml` keeps the
+  drawable, and `startReminders` now asks for permission before setting up.
+- **Timezone names.** The phone reports the legacy name `Asia/Calcutta`, which
+  `timezone`'s default data lacks, so reminders fell back to UTC (5½ h off). It now loads
+  `latest_all` (links included) and, failing a lookup, uses any zone at the current
+  offset.
+
+Settings shows "Notifications are blocked" with **Allow** when reminders are on but the
+system says no. If Android has stopped showing the prompt (after two refusals), Allow
+opens Donut's notification settings through a `donut/system` channel in `MainActivity`.
+The check reruns whenever the app resumes.
+
+Verified on the phone (2026-10-19): the prompt shows, and exact alarms are scheduled at
+the right local times.

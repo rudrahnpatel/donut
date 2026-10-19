@@ -29,6 +29,12 @@ final _upcomingPinsProvider = StreamProvider<List<PinRow>>((ref) {
       .watchRange(today.startMin, today.endMin + minutesPerDay);
 });
 
+/// Whether the system lets Donut show notifications (null off Android).
+/// Re-checked when the app comes back to the foreground.
+final notificationsAllowedProvider = FutureProvider<bool?>(
+  (ref) => ref.watch(reminderServiceProvider).notificationsAllowed(),
+);
+
 /// The reminders that should exist right now. Recomputed when saved
 /// entries, tasks or settings change; not every minute.
 final remindersPlanProvider = Provider<List<Reminder>>((ref) {
@@ -49,10 +55,13 @@ final remindersPlanProvider = Provider<List<Reminder>>((ref) {
 /// [remindersPlanProvider]. Call once from the app shell.
 Future<void> startReminders(WidgetRef ref) async {
   final service = ref.read(reminderServiceProvider);
-  await service.init();
+  // Ask first: a failure setting up notifications must not also cost the
+  // permission prompt.
   if (ref.read(settingsProvider).remindersEnabled) {
     await service.requestPermission();
+    ref.invalidate(notificationsAllowedProvider);
   }
+  await service.init();
   await service.apply(ref.read(remindersPlanProvider));
   ref.listenManual(remindersPlanProvider, (prev, next) {
     if (prev == null || !listEquals(prev, next)) service.apply(next);
