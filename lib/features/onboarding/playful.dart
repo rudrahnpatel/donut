@@ -1,262 +1,111 @@
 import 'dart:math' as math;
 
-import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// A chunky button that sits on a darker ledge and presses down into it.
-class ChunkyButton extends StatefulWidget {
-  const ChunkyButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
-    this.color,
-  });
+import '../../app/theme/theme.dart';
+import '../clock/clock_geometry.dart';
+import '../clock/spiral_math.dart';
 
-  final String label;
+/// Tour progress as a little donut: one arc per step, filled in as you go.
+class StepRing extends StatelessWidget {
+  const StepRing({super.key, required this.step, required this.count});
 
-  /// Null greys the button out.
-  final VoidCallback? onPressed;
-  final Color? color;
-
-  @override
-  State<ChunkyButton> createState() => _ChunkyButtonState();
-}
-
-class _ChunkyButtonState extends State<ChunkyButton> {
-  bool _down = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final enabled = widget.onPressed != null;
-    final face = enabled
-        ? (widget.color ?? scheme.primary)
-        : scheme.surfaceContainerHighest;
-    final hsl = HSLColor.fromColor(face);
-    final ledge = hsl
-        .withLightness((hsl.lightness - 0.14).clamp(0.0, 1.0))
-        .toColor();
-    final ink = !enabled
-        ? scheme.onSurfaceVariant
-        : ThemeData.estimateBrightnessForColor(face) == Brightness.dark
-        ? Colors.white
-        : Colors.black87;
-    const lift = 5.0;
-    final pressed = _down && enabled;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: widget.label,
-      child: GestureDetector(
-        onTapDown: enabled ? (_) => setState(() => _down = true) : null,
-        onTapCancel: () => setState(() => _down = false),
-        onTapUp: (_) => setState(() => _down = false),
-        onTap: enabled
-            ? () {
-                HapticFeedback.lightImpact();
-                widget.onPressed!();
-              }
-            : null,
-        child: SizedBox(
-          height: 56 + lift,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                top: lift,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: enabled ? ledge : scheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-              ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 60),
-                left: 0,
-                right: 0,
-                top: pressed ? lift : 0,
-                height: 56,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: face,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(
-                    widget.label.toUpperCase(),
-                    style: TextStyle(
-                      color: ink,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A speech bubble with a tail on its left, for the mascot beside it. The
-/// text types itself out; the layout is fixed from the start so lines don't
-/// jump as it does.
-class SpeechBubble extends StatelessWidget {
-  const SpeechBubble({super.key, required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
-    final chars = text.characters.toList();
-    final style = t.titleMedium?.copyWith(
-      fontWeight: FontWeight.w700,
-      height: 1.3,
-    );
-    final border = BorderSide(color: scheme.outlineVariant, width: 2);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.fromBorderSide(border),
-          ),
-          child: TweenAnimationBuilder<int>(
-            key: ValueKey(text),
-            tween: IntTween(begin: 0, end: chars.length),
-            duration: Duration(
-              milliseconds: (chars.length * 22).clamp(250, 1600),
-            ),
-            builder: (_, n, _) => Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: chars.take(n).join()),
-                  TextSpan(
-                    text: chars.skip(n).join(),
-                    style: const TextStyle(color: Colors.transparent),
-                  ),
-                ],
-              ),
-              style: style,
-            ),
-          ),
-        ),
-        // The tail, pointing at the mascot.
-        Positioned(
-          left: -8,
-          top: 22,
-          child: Transform.rotate(
-            angle: math.pi / 4,
-            child: Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow,
-                border: Border(left: border, bottom: border),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The tour's progress: a thick rounded bar with a shine along its top.
-class ProgressPill extends StatelessWidget {
-  const ProgressPill({super.key, required this.value, required this.color});
-
-  final double value;
-  final Color color;
+  final int step;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return TweenAnimationBuilder<double>(
-      tween: Tween(end: value.clamp(0.0, 1.0)),
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutBack,
-      builder: (_, v, _) => LayoutBuilder(
-        builder: (context, c) => Container(
-          height: 16,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.centerLeft,
-          child: Container(
-            width: math.max(16, c.maxWidth * v),
-            height: 16,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.fromLTRB(8, 3, 8, 0),
-            alignment: Alignment.topCenter,
-            child: Container(
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+      tween: Tween(end: step.toDouble()),
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+      builder: (_, v, _) => CustomPaint(
+        size: const Size.square(30),
+        painter: _StepRingPainter(
+          v,
+          count,
+          scheme.primary,
+          scheme.surfaceContainerHighest,
         ),
       ),
     );
   }
 }
 
-/// Confetti that bursts from the top middle each time [fire] changes.
-class ConfettiBurst extends StatefulWidget {
-  const ConfettiBurst({super.key, required this.fire, this.pieces = 70});
+class _StepRingPainter extends CustomPainter {
+  _StepRingPainter(this.done, this.count, this.ink, this.track);
+
+  final double done;
+  final int count;
+  final Color ink;
+  final Color track;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+    const gap = 0.32;
+    final sweep = 2 * math.pi / count;
+    for (var i = 0; i < count; i++) {
+      final from = -math.pi / 2 + i * sweep + gap / 2;
+      final fill = (done - i + 1).clamp(0.0, 1.0);
+      arc.color = track;
+      canvas.drawArc(rect.deflate(3), from, sweep - gap, false, arc);
+      if (fill > 0) {
+        arc.color = ink;
+        canvas.drawArc(rect.deflate(3), from, (sweep - gap) * fill, false, arc);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StepRingPainter old) =>
+      old.done != done || old.ink != ink || old.track != track;
+}
+
+/// Sprinkles bursting out of [origin] (as a fraction of the area) each
+/// time [fire] changes, in the entries' palette.
+class SprinkleBurst extends StatefulWidget {
+  const SprinkleBurst({
+    super.key,
+    required this.fire,
+    this.origin = const Offset(0.5, 0.45),
+    this.pieces = 60,
+  });
 
   final int fire;
+  final Offset origin;
   final int pieces;
 
   @override
-  State<ConfettiBurst> createState() => _ConfettiBurstState();
+  State<SprinkleBurst> createState() => _SprinkleBurstState();
 }
 
-class _ConfettiBurstState extends State<ConfettiBurst>
+class _SprinkleBurstState extends State<SprinkleBurst>
     with SingleTickerProviderStateMixin {
   late final _t = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1900),
+    duration: const Duration(milliseconds: 1500),
   );
   final _random = math.Random();
-  List<_Piece> _pieces = const [];
-
-  static const _colors = [
-    Color(0xFFFF5FA2),
-    Color(0xFFFFC94D),
-    Color(0xFF4FC3F7),
-    Color(0xFF58CC02),
-    Color(0xFFBA68C8),
-    Color(0xFFFF8A65),
-  ];
+  List<_Sprinkle> _pieces = const [];
 
   @override
-  void didUpdateWidget(ConfettiBurst old) {
+  void didUpdateWidget(SprinkleBurst old) {
     super.didUpdateWidget(old);
     if (widget.fire != old.fire && widget.fire > 0) {
       _pieces = [
         for (var i = 0; i < widget.pieces; i++)
-          _Piece(
-            angle: -math.pi / 2 + (_random.nextDouble() - 0.5) * 2.2,
-            speed: 0.55 + _random.nextDouble() * 0.75,
-            spin: (_random.nextDouble() - 0.5) * 14,
-            color: _colors[i % _colors.length],
-            round: _random.nextBool(),
+          _Sprinkle(
+            angle: _random.nextDouble() * 2 * math.pi,
+            speed: 0.25 + _random.nextDouble() * 0.45,
+            spin: (_random.nextDouble() - 0.5) * 10,
+            tilt: _random.nextDouble() * math.pi,
+            color: Color(entryPalette[i % entryPalette.length]),
           ),
       ];
       _t.forward(from: 0);
@@ -275,61 +124,291 @@ class _ConfettiBurstState extends State<ConfettiBurst>
       animation: _t,
       builder: (_, _) => CustomPaint(
         size: Size.infinite,
-        painter: _t.isAnimating ? _ConfettiPainter(_pieces, _t.value) : null,
+        painter: _t.isAnimating
+            ? _BurstPainter(
+                _pieces,
+                Curves.easeOut.transform(_t.value),
+                _t.value,
+                widget.origin,
+              )
+            : null,
       ),
     ),
   );
 }
 
-class _Piece {
-  const _Piece({
+class _Sprinkle {
+  const _Sprinkle({
     required this.angle,
     required this.speed,
     required this.spin,
+    required this.tilt,
     required this.color,
-    required this.round,
   });
 
   final double angle;
   final double speed;
   final double spin;
+  final double tilt;
   final Color color;
-  final bool round;
 }
 
-class _ConfettiPainter extends CustomPainter {
-  _ConfettiPainter(this.pieces, this.t);
+class _BurstPainter extends CustomPainter {
+  _BurstPainter(this.pieces, this.reach, this.t, this.origin);
 
-  final List<_Piece> pieces;
+  final List<_Sprinkle> pieces;
+
+  /// Eased distance travelled (0 → 1) and raw time (0 → 1).
+  final double reach;
   final double t;
+  final Offset origin;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final origin = Offset(size.width / 2, size.height * 0.3);
+    final o = Offset(size.width * origin.dx, size.height * origin.dy);
     final scale = size.shortestSide;
-    final fade = t < 0.7 ? 1.0 : (1 - t) / 0.3;
+    final fade = t < 0.6 ? 1.0 : (1 - t) / 0.4;
     for (final p in pieces) {
-      final v = Offset(math.cos(p.angle), math.sin(p.angle)) * p.speed * scale;
-      final pos = origin + v * t + Offset(0, 1.1 * scale * t * t);
+      final dir = Offset(math.cos(p.angle), math.sin(p.angle));
+      // Out from the dial, then drifting down a little.
+      final pos = o + dir * p.speed * scale * reach + Offset(0, 40 * t * t);
       canvas.save();
       canvas.translate(pos.dx, pos.dy);
-      canvas.rotate(p.spin * t);
-      final paint = Paint()..color = p.color.withValues(alpha: fade);
-      if (p.round) {
-        canvas.drawCircle(Offset.zero, 4, paint);
-      } else {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset.zero, width: 12, height: 6),
-            const Radius.circular(2),
-          ),
-          paint,
-        );
-      }
+      canvas.rotate(p.tilt + p.spin * t);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset.zero, width: 13, height: 5),
+          const Radius.circular(2.5),
+        ),
+        Paint()..color = p.color.withValues(alpha: fade),
+      );
       canvas.restore();
     }
   }
 
   @override
-  bool shouldRepaint(_ConfettiPainter old) => old.t != t;
+  bool shouldRepaint(_BurstPainter old) => old.t != t;
+}
+
+/// A few sprinkles drifting slowly behind the tour.
+class DriftingSprinkles extends StatefulWidget {
+  const DriftingSprinkles({super.key});
+
+  @override
+  State<DriftingSprinkles> createState() => _DriftingSprinklesState();
+}
+
+class _DriftingSprinklesState extends State<DriftingSprinkles>
+    with SingleTickerProviderStateMixin {
+  late final _t = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 30),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _t,
+        builder: (_, _) => CustomPaint(
+          size: Size.infinite,
+          painter: _DriftPainter(
+            _t.value,
+            Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.22,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _DriftPainter extends CustomPainter {
+  _DriftPainter(this.t, this.alpha);
+
+  final double t;
+  final double alpha;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < 16; i++) {
+      // Fixed lanes, each sprinkle rising slowly at its own pace.
+      final x = (i * 0.618 % 1) * size.width;
+      final speed = 0.5 + (i * 0.37 % 1);
+      final y = (1 - ((t * speed + i * 0.13) % 1)) * (size.height + 40) - 20;
+      canvas.save();
+      canvas.translate(x + math.sin(t * 2 * math.pi * speed + i) * 12, y);
+      canvas.rotate(i * 0.9 + t * 2 * math.pi * (i.isEven ? 1 : -1));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset.zero, width: 16, height: 6),
+          const Radius.circular(3),
+        ),
+        Paint()
+          ..color = Color(entryPalette[i % entryPalette.length])
+              .withValues(alpha: alpha),
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DriftPainter old) => old.t != t;
+}
+
+/// The gesture a [GhostFinger] demonstrates.
+enum GhostMove { drag, holdFlick, tap }
+
+/// A translucent fingertip looping over a dial to show a gesture: drag
+/// along a ring (leaving a trail), hold then flick up, or tap.
+class GhostFinger extends StatefulWidget {
+  const GhostFinger({
+    super.key,
+    required this.move,
+    required this.spec,
+    required this.from,
+    this.to = 0,
+  });
+
+  final GhostMove move;
+  final DialSpec spec;
+
+  /// Day-relative minutes: where the finger lands, and (for a drag) where
+  /// it lifts.
+  final int from;
+  final int to;
+
+  @override
+  State<GhostFinger> createState() => _GhostFingerState();
+}
+
+class _GhostFingerState extends State<GhostFinger>
+    with SingleTickerProviderStateMixin {
+  late final _t = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IgnorePointer(
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final side = math.min(c.maxWidth, c.maxHeight);
+          final g = ClockGeometry(Size.square(side), widget.spec);
+          return AnimatedBuilder(
+            animation: _t,
+            builder: (_, _) => CustomPaint(
+              size: Size.square(side),
+              painter: _GhostPainter(widget, g, _t.value, scheme),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GhostPainter extends CustomPainter {
+  _GhostPainter(this.w, this.g, this.t, this.scheme);
+
+  final GhostFinger w;
+  final ClockGeometry g;
+  final double t;
+  final ColorScheme scheme;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final start = g.pointForMinute(w.from.toDouble());
+    final ink = scheme.onSurface;
+    void finger(Offset p, {double press = 0, double alpha = 1}) {
+      if (alpha <= 0) return;
+      canvas.drawCircle(
+        p,
+        22 - press * 4,
+        Paint()..color = ink.withValues(alpha: 0.18 * alpha),
+      );
+      canvas.drawCircle(
+        p,
+        22 - press * 4,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..color = ink.withValues(alpha: 0.55 * alpha),
+      );
+    }
+
+    void ripple(Offset p, double k) {
+      if (k <= 0 || k >= 1) return;
+      canvas.drawCircle(
+        p,
+        22 + 26 * k,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = scheme.primary.withValues(alpha: 0.6 * (1 - k)),
+      );
+    }
+
+    double phase(double a, double b) => ((t - a) / (b - a)).clamp(0.0, 1.0);
+    final appear = phase(0, 0.12);
+    switch (w.move) {
+      case GhostMove.drag:
+        final k = Curves.easeInOut.transform(phase(0.15, 0.7));
+        final u = w.from + (w.to - w.from) * k;
+        final lift = phase(0.75, 0.9);
+        if (k > 0) {
+          // The entry the drag would draw.
+          final (r0, r1) = g.laneBounds(g.spec.laneOf(w.from.toDouble()));
+          final mid = (r0 + r1) / 2;
+          final a0 = g.spec.angleOf(w.from.toDouble()) - math.pi / 2;
+          final sweep = (u - w.from) / g.spec.turn * 2 * math.pi;
+          canvas.drawArc(
+            Rect.fromCircle(center: g.center, radius: mid),
+            a0,
+            sweep,
+            false,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeCap = StrokeCap.round
+              ..strokeWidth = (r1 - r0) * 0.8
+              ..color = scheme.primary.withValues(alpha: 0.35 * (1 - lift)),
+          );
+        }
+        finger(
+          g.pointForMinute(u),
+          press: k > 0 ? 1 : 0,
+          alpha: appear * (1 - lift),
+        );
+      case GhostMove.holdFlick:
+        final hold = phase(0.15, 0.55);
+        final flick = Curves.easeOut.transform(phase(0.6, 0.78));
+        final gone = phase(0.8, 0.92);
+        ripple(start, hold);
+        finger(
+          start + Offset(0, -90 * flick),
+          press: hold > 0 ? 1 : 0,
+          alpha: appear * (1 - gone),
+        );
+      case GhostMove.tap:
+        final press = phase(0.2, 0.3) - phase(0.3, 0.4);
+        ripple(start, phase(0.3, 0.7));
+        finger(start, press: press, alpha: appear * (1 - phase(0.6, 0.8)));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GhostPainter old) => old.t != t || old.g != g;
 }

@@ -1,61 +1,66 @@
-# First-run tour with Sprinkles
+# First-run tour
 
 ## What
 
-On a device's first launch, a playful tour runs before the app, hosted by Sprinkles, a
-hand-drawn donut mascot that bobs, blinks and jumps for joy.
+On a device's first launch, a short tour runs before the app. **The dial is the star**,
+not a mascot.
 
-- **Steps:** hello → your day is a donut (sample dial) → draw your first entry → hold it
-  (Tasks up, Label down, pins left/right) → zoom into an hour → plan mode → nudges
-  (opt-in reminders) → done.
-- **Learning by doing.** The draw, hold and zoom steps use a real `ClockView` on
-  throwaway local state. The main button stays grey until you've done the thing; then
-  Sprinkles cheers, confetti bursts and the button lights up. "I'll try later" skips
-  any step, and ✕ skips the whole tour.
-- **Look:** a thick green progress bar, chunky 3D buttons that press into their ledge,
-  and speech bubbles that type themselves out.
-- **Replaying:** Settings → About → **Replay the tour**.
+- **Showcase:** on hello and done, a sample day draws itself around the dial.
+- **Practice:** draw, hold and zoom happen on a real practice dial. A translucent **ghost
+  finger** loops the gesture: a drag along the ring that leaves a trail, a press with a
+  ripple and then an upward flick, or a tap. It disappears once you've done the gesture
+  yourself.
+- **Celebration:** success bursts **sprinkles** out of the dial in the entries' palette,
+  the dial gives a small bounce, and the words change to praise.
+- **Steps:** hello → your day as a donut → draw → hold (tasks, labels, pins) → zoom →
+  plan mode (a preview of the violet sketchpad) → reminders (opt-in, with sample
+  notifications) → done.
+- **Look:** the app's own Material You colours and pill buttons; progress is a small
+  donut that fills step by step ("3 of 8"), with sprinkles drifting faintly behind.
+- **Skipping:** "Skip this step" on practice steps, "Skip tour" at the top, and
+  Settings → About → **Replay the tour** to see it again.
 
 ## How
 
-- `lib/features/onboarding/`:
-  - `sprinkles.dart`: mascot painter (dough with the hole punched out, wobbly frosting,
-    sprinkles, face on the lower half) and its animations: bob, random blinks, a jump
-    with squash and wiggle whenever `cheer` changes.
-  - `playful.dart`: `ChunkyButton`, `SpeechBubble`, `ProgressPill`, `ConfettiBurst`.
-    - The bubble's typewriter keeps its layout fixed by drawing the unrevealed
-      characters transparent.
-    - Confetti positions are closed-form (`origin + v·t + g·t²`), so no particle state
-      is stepped.
-  - `onboarding_screen.dart`: the steps, the practice dial's callbacks (create, move,
-    hold menu, empty-spot pins, zoom), and the "onboarded" state.
-- **First-run flag:** `OnboardedNotifier` keeps `onboarded` in LocalKv, which is per
-  device and never synced. `main` reads it and overrides `onboardedAtStartProvider`.
-  `DonutApp`'s `_Home` cross-fades from the tour to `AppShell` on finish. The shell (and
-  with it sync, reminders and the widget bridge) starts only after the tour.
-- **Nudge step:** "Yes" turns reminders on in settings and asks for notification
-  permission.
-- **Dev harness:** `DONUT_ONBOARD=<step>` opens the tour at that step
-  (`onboardingFirstStepProvider`). Without it the harness skips the tour.
+- **`lib/features/onboarding/playful.dart`:**
+  - `StepRing`: progress donut.
+  - `SprinkleBurst`: closed-form particles (`origin + dir·speed·ease(t)` plus a little
+    fall), so no particle state is stepped.
+  - `DriftingSprinkles`: background.
+  - `GhostFinger`: a looping gesture demo laid over the dial with the same
+    `ClockGeometry`, so it lands exactly on the rings.
+- **`onboarding_screen.dart`:**
+  - The steps, and the practice dial's callbacks (create, move, hold menu, empty-spot
+    pins, zoom) on throwaway local state.
+  - The showcase animation (`_sampleBlocks(progress)`).
+  - The `onboarded` state.
+- **First-run flag:** `OnboardedNotifier` keeps `onboarded` in LocalKv (per device,
+  never synced). `main` reads it into `onboardedAtStartProvider`. `DonutApp`'s `_Home`
+  cross-fades from the tour to `AppShell`, which only then starts sync, reminders and the
+  widget bridge.
+- **Dev harness:** `DONUT_ONBOARD=<step>` opens the tour at a step
+  (`onboardingFirstStepProvider`); otherwise the harness skips it.
 
 ```mermaid
 flowchart LR
   hello --> donut --> draw --> hold --> zoom --> plan --> nudge --> done --> App[AppShell]
-  draw -. "drag creates practice entry → cheer + confetti" .-> draw
-  hold -. "menu pick / pin → cheer" .-> hold
-  zoom -. "tap an hour → cheer" .-> zoom
+  draw -. "ghost drag until you draw → sprinkles" .-> draw
+  hold -. "ghost hold+flick until a pick or pin → sprinkles" .-> hold
+  zoom -. "ghost tap until you zoom → sprinkles" .-> zoom
 ```
 
 ## Why
 
-- The user found the app "a bit confusing at first" and asked for a welcoming,
-  Duolingo-like, playful guide. The dial's gestures (drag, hold and flick, tap to zoom,
-  hold the centre) are invisible until tried, so the tour has you do each one on a
-  practice dial instead of reading slides.
-- **Practice state is local**, so nothing the user draws in the tour lands in their plan
-  or syncs.
+- The user found the app "a bit confusing at first" and wanted something welcoming and
+  playful, "like Duolingo".
+- **First version, rejected:** a talking donut mascot in speech bubbles, Duolingo's
+  green, chunky 3D buttons and a thick progress bar. The user said it was a one-to-one
+  copy: they wanted the spirit, not the look.
+- **Second version:** draws the playfulness from Donut itself. The dial animates, the
+  progress is a donut, the confetti is sprinkles, and the colours are the user's theme.
+- **Ghost finger, not text:** the dial's gestures (drag, hold and flick, tap to zoom)
+  are invisible until tried, so the tour shows each one moving on the real dial and asks
+  you to do it.
+- **Practice state is local**, so nothing drawn in the tour lands in the plan or syncs.
 - **The flag is per device**, so a new phone gets the tour even when its plan arrives
-  through sync. Existing installs see it once after updating, which is intended (that is
-  how the user meets it).
-- **Dark button text on the green:** white on #58CC02 is below accessible contrast, so
-  `ChunkyButton` picks its ink from the colour's brightness.
+  through sync.

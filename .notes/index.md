@@ -11,4 +11,4 @@
 - [android_clock_widget.md](android_clock_widget.md) — day-view and hour-view home-screen widgets: Kotlin-drawn dial bitmap fed by home_widget JSON, live AnalogClock hands on top, self-scheduled refresh
 - [google_sync_architecture.md](google_sync_architecture.md) — Google sign-in per platform, per-device Drive files merged by HLC, two-way "Donut" calendar mirror and free/busy ghost arcs
 - [pins.md](pins.md) — hold an entry and flick right/left to pin its end/start, or hold an empty spot to pin that moment (Reach by, Meeting at, Leave by, custom); own table, synced, reminds 10 min early
-- [onboarding_tour.md](onboarding_tour.md) — first-run tour hosted by Sprinkles the donut: learn-by-doing on a practice dial, confetti, opt-in nudges; replay from Settings
+- [onboarding_tour.md](onboarding_tour.md) — first-run tour where the dial is the star: self-drawing showcase, ghost-finger gesture demos on a practice dial, sprinkle bursts, opt-in reminders; replay from Settings
