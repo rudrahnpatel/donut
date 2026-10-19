@@ -12,3 +12,4 @@
 - [google_sync_architecture.md](google_sync_architecture.md) — Google sign-in per platform, per-device Drive files merged by HLC, two-way "Donut" calendar mirror and free/busy ghost arcs
 - [pins.md](pins.md) — hold an entry and flick right/left to pin its end/start, or hold an empty spot to pin that moment (Reach by, Meeting at, Leave by, custom); own table, synced, reminds 10 min early
 - [onboarding_tour.md](onboarding_tour.md) — first-run tour where the dial is the star: self-drawing showcase, ghost-finger gesture demos on a practice dial, sprinkle bursts, opt-in reminders; replay from Settings
+- [app_icon.md](app_icon.md) — the donut-clock icon, generated for Android (adaptive, themed, notification), Linux (desktop entry) and Windows by tool/make_icons.py

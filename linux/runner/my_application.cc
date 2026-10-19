@@ -61,6 +61,18 @@ static void my_application_activate(GApplication* application) {
   if (size != nullptr) sscanf(size, "%dx%d", &width, &height);
   gtk_window_set_default_size(window, width, height);
 
+  // The icon from the bundle, for X11 and window lists that read it; on
+  // Wayland the desktop entry's icon (tool/install_linux_desktop.sh) is
+  // what shows.
+  g_autofree gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
+  if (exe != nullptr) {
+    g_autofree gchar* dir = g_path_get_dirname(exe);
+    g_autofree gchar* icon = g_build_filename(
+        dir, "data", "flutter_assets", "assets", "icon", "donut-512.png",
+        nullptr);
+    gtk_window_set_icon_from_file(window, icon, nullptr);
+  }
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);

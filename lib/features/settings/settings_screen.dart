@@ -243,10 +243,14 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                const ListTile(
-                  leading: Text('🍩', style: TextStyle(fontSize: 28)),
-                  title: Text('Donut'),
-                  subtitle: Text('Plan your day on a clock.'),
+                ListTile(
+                  leading: Image.asset(
+                    'assets/icon/donut-512.png',
+                    width: 40,
+                    height: 40,
+                  ),
+                  title: const Text('Donut'),
+                  subtitle: const Text('Plan your day on a clock.'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.school_rounded),
