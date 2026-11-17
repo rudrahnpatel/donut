@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the update download folder (getTemporaryDirectory()/updates/ on the
+     Dart side, i.e. cacheDir/updates) is shared with the package installer. -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>

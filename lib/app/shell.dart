@@ -10,6 +10,7 @@ import '../features/library/library_screen.dart';
 import '../features/reminders/reminder_providers.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/sync/sync_controller.dart';
+import '../features/update/update_ui.dart';
 import '../features/widget_bridge/widget_bridge.dart';
 import '../features/work/work_import.dart';
 import 'providers.dart';
@@ -51,6 +52,10 @@ class _AppShellState extends ConsumerState<AppShell>
     startWidgetBridge(ref);
     startWorkImport(ref);
     ref.read(syncControllerProvider.notifier).start();
+    // Android: offer a newer GitHub release (at most every 6 h).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) checkForUpdateOnStart(context, ref);
+    });
   }
 
   @override

@@ -8,6 +8,7 @@ import '../mcp/mcp_settings_section.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../reminders/reminder_providers.dart';
 import '../sync/sync_settings_section.dart';
+import '../update/update_ui.dart';
 
 const _seedChoices = [
   0xFFE86A92,
@@ -258,6 +259,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Donut'),
                   subtitle: const Text('Plan your day on a clock.'),
                 ),
+                const UpdateSettingsTiles(),
                 ListTile(
                   leading: const Icon(Icons.school_rounded),
                   title: const Text('Replay the tour'),
