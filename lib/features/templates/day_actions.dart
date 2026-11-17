@@ -68,7 +68,10 @@ class DayMenuButton extends ConsumerWidget {
           case _DayAction.copyYesterday:
             snack(added(await tools.copyFrom(day.addDays(-1), day)));
           case _DayAction.applyTemplate:
-            final templates = ref.read(templatesProvider).value ?? const [];
+            // Wait for the stream's first value: nothing else may be watching
+            // it yet (e.g. Library never opened), so `.value` would be null.
+            final templates = await ref.read(templatesProvider.future);
+            if (!context.mounted) return;
             if (templates.isEmpty) {
               snack('No templates yet — save a day as one first');
               return;
