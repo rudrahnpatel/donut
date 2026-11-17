@@ -36,7 +36,18 @@ party. This takes about 15 minutes, once.
 | **Web application** | No redirect URIs needed | Its client id is the Android `serverClientId` |
 | **Desktop app** | — | Linux / Windows sign-in (browser + localhost redirect) |
 
-SHA-1 of the key the APKs are signed with (the debug key, for now):
+Create one Android client per signing key: release builds (GitHub releases) and debug builds
+use different keys, and sign-in fails with `[16] Account reauth failed` (or code 10) when the
+installed APK's SHA-1 isn't registered.
+
+Release key (`~/.config/donut/release.jks`), read from any built APK:
+
+```sh
+apksigner verify --print-certs build/release/donut-<version>.apk | grep SHA-1
+# currently B6:CE:BD:5B:47:A2:C2:6F:FF:98:A8:8C:A1:7E:5D:CD:99:A0:29:7D
+```
+
+Debug key:
 
 ```sh
 keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey \
