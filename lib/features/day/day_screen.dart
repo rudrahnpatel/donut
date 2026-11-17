@@ -118,7 +118,14 @@ class _DayScreenState extends ConsumerState<DayScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text), action: action));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(text),
+          action: action,
+          persist: false,
+          duration: const Duration(seconds: 4),
+        ),
+      );
   }
 
   /// Horizontal distance of the current swipe on the date.
@@ -539,7 +546,14 @@ class _DayPageState extends ConsumerState<DayPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text), action: action));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(text),
+          action: action,
+          persist: false,
+          duration: const Duration(seconds: 4),
+        ),
+      );
   }
 
   // ── navigation between hours and days ──────────────────────────────────

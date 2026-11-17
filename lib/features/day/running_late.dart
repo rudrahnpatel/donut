@@ -201,6 +201,8 @@ void _snack(BuildContext context, String text, {VoidCallback? undo}) {
         action: undo == null
             ? null
             : SnackBarAction(label: 'Undo', onPressed: undo),
+        persist: false,
+        duration: const Duration(seconds: 4),
       ),
     );
 }
