@@ -52,3 +52,6 @@ google.json
 
 # The Noctalia plugin keeps its settings next to it (symlinked in).
 linux/noctalia/donut-work/settings.json
+
+# Gradle build output
+/android/build/
