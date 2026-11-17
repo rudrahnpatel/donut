@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/providers.dart';
 import '../../data/repos/settings_repo.dart';
+import '../mcp/mcp_provider.dart';
+import '../mcp/mcp_settings_section.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../reminders/reminder_providers.dart';
 import '../sync/sync_settings_section.dart';
@@ -239,6 +241,10 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const _Header('Sync'),
           const SyncSettingsSection(),
+          if (mcpSupported) ...[
+            const _Header('Claude'),
+            const McpSettingsSection(),
+          ],
           const _Header('About'),
           Card(
             child: Column(

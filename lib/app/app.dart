@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../data/repos/settings_repo.dart';
 import '../features/day/plan_mode.dart';
+import '../features/mcp/mcp_provider.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'providers.dart';
 import 'shell.dart';
@@ -16,6 +17,8 @@ class DonutApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(settingsProvider);
     final planning = ref.watch(planningProvider);
+    // Desktop: keeps the localhost MCP server for Claude running.
+    ref.listen(mcpServerProvider, (_, _) {});
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) {
         final seed = Color(s.seedColor);

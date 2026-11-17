@@ -63,6 +63,12 @@ final settingsProvider = Provider<AppSettings>(
   (ref) => ref.watch(_settingsStream).value ?? const AppSettings(),
 );
 
+/// Whether the stored settings have loaded (until then [settingsProvider]
+/// holds defaults).
+final settingsLoadedProvider = Provider<bool>(
+  (ref) => ref.watch(_settingsStream).hasValue,
+);
+
 final dayPlanProvider = StreamProvider.family<DayPlan, Day>(
   (ref, day) => ref.watch(blockRepoProvider).watchDay(day),
 );

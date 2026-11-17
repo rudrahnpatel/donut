@@ -99,6 +99,11 @@ class PinRepo {
     return id;
   }
 
+  /// A live (not deleted) pin, or null.
+  Future<PinRow?> find(String id) => (_db.select(
+    _db.pins,
+  )..where((t) => t.id.equals(id) & t.deleted.equals(false))).getSingleOrNull();
+
   Future<void> move(String id, int atMin) =>
       _write(id, PinsCompanion(atMin: Value(atMin)));
 

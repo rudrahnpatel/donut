@@ -29,7 +29,12 @@ class AppSettings {
     this.reminderLeadMin = 0,
     this.syncMode = SyncMode.off,
     this.ghostTitles = false,
+    this.mcpServer = true,
+    this.mcpPort = defaultMcpPort,
   });
+
+  /// Where the desktop MCP server listens by default (127.0.0.1 only).
+  static const defaultMcpPort = 47821;
 
   final ThemePref theme;
   final bool amoled;
@@ -53,6 +58,11 @@ class AppSettings {
   /// Calendar scope.
   final bool ghostTitles;
 
+  /// Desktop only: run the localhost MCP server so Claude can read and plan
+  /// the day. Synced like every setting; phones ignore it.
+  final bool mcpServer;
+  final int mcpPort;
+
   Map<String, Object> toMap() => {
     'theme': theme.name,
     'amoled': amoled,
@@ -68,6 +78,8 @@ class AppSettings {
     'reminderLeadMin': reminderLeadMin,
     'syncMode': syncMode.name,
     'ghostTitles': ghostTitles,
+    'mcpServer': mcpServer,
+    'mcpPort': mcpPort,
   };
 
   static AppSettings fromMap(Map<String, Object?> m) {
@@ -106,6 +118,8 @@ class AppSettings {
       reminderLeadMin: pick('reminderLeadMin', d.reminderLeadMin),
       syncMode: pickEnum('syncMode', SyncMode.values, d.syncMode),
       ghostTitles: pick('ghostTitles', d.ghostTitles),
+      mcpServer: pick('mcpServer', d.mcpServer),
+      mcpPort: pick('mcpPort', d.mcpPort),
     );
   }
 
@@ -124,6 +138,8 @@ class AppSettings {
     int? reminderLeadMin,
     SyncMode? syncMode,
     bool? ghostTitles,
+    bool? mcpServer,
+    int? mcpPort,
   }) => AppSettings(
     theme: theme ?? this.theme,
     amoled: amoled ?? this.amoled,
@@ -139,6 +155,8 @@ class AppSettings {
     reminderLeadMin: reminderLeadMin ?? this.reminderLeadMin,
     syncMode: syncMode ?? this.syncMode,
     ghostTitles: ghostTitles ?? this.ghostTitles,
+    mcpServer: mcpServer ?? this.mcpServer,
+    mcpPort: mcpPort ?? this.mcpPort,
   );
 }
 

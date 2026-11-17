@@ -54,6 +54,7 @@ class PlanBlock {
     Object? emoji = _keep,
     Object? activityId = _keep,
     Object? note = _keep,
+    Object? color = _keep,
   }) => PlanBlock(
     id: id,
     startMin: startMin ?? this.startMin,
@@ -61,7 +62,7 @@ class PlanBlock {
     emoji: emoji == _keep ? this.emoji : emoji as String?,
     activityId: activityId == _keep ? this.activityId : activityId as String?,
     note: note == _keep ? this.note : note as String?,
-    color: color,
+    color: color == _keep ? this.color : color as int?,
     seriesId: seriesId,
     status: status,
     isNew: isNew,
@@ -194,6 +195,22 @@ class BlockRepo {
     )) {
       yield await load();
     }
+  }
+
+  /// The block as the UI sees it (its unsaved edit applied), or null if it
+  /// doesn't exist or is deleted.
+  Future<PlanBlock?> find(String id) async {
+    final e = await _edit(id);
+    final s = await _saved(id);
+    if (e != null) {
+      if (e.deleted) return null;
+      return _fromEdit(
+        e,
+        isNew: e.baseHlc == null,
+        conflict: s != null && e.baseHlc != s.hlc,
+      );
+    }
+    return s == null ? null : _fromSaved(s);
   }
 
   Future<List<BlockRow>> _savedIn(int from, int to) =>
@@ -504,6 +521,7 @@ class BlockRepo {
   Future<String> createSaved(
     int startMin,
     int endMin, {
+    String? emoji,
     String? activityId,
     String? note,
     int? color,
@@ -516,6 +534,7 @@ class BlockRepo {
             id: id,
             startMin: startMin,
             durMin: endMin - startMin,
+            emoji: Value(emoji),
             activityId: Value(activityId),
             note: Value(note),
             color: Value(color),
