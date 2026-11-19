@@ -9,11 +9,60 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import androidx.core.content.FileProvider
 import java.io.File
+import org.json.JSONArray
+import org.json.JSONObject
 
 class MainActivity : FlutterActivity() {
 
+    private var liveChannel: MethodChannel? = null
+
+    /** A Live Update button tapped (e.g. `late:5`) not yet taken by Dart. */
+    private var pendingAction: String? = null
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val action = intent.getStringExtra(LiveCountdown.EXTRA_ACTION) ?: return
+        intent.removeExtra(LiveCountdown.EXTRA_ACTION)
+        val ch = liveChannel
+        if (ch != null) ch.invokeMethod("action", action) else pendingAction = action
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        pendingAction = intent?.getStringExtra(LiveCountdown.EXTRA_ACTION)
+        intent?.removeExtra(LiveCountdown.EXTRA_ACTION)
+        // Android 16 Live Updates for the countdown (see LiveCountdown.kt).
+        liveChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "donut/live")
+            .apply {
+                setMethodCallHandler { call, result ->
+                    when (call.method) {
+                        "supported" -> result.success(LiveCountdown.supported())
+                        "canPromote" -> result.success(LiveCountdown.canPromote(this@MainActivity))
+                        "show" -> {
+                            LiveCountdown.show(this@MainActivity, JSONObject(call.arguments as String))
+                            result.success(null)
+                        }
+                        "schedule" -> {
+                            LiveCountdown.schedule(this@MainActivity, JSONArray(call.arguments as String))
+                            result.success(null)
+                        }
+                        "takeAction" -> {
+                            result.success(pendingAction)
+                            pendingAction = null
+                        }
+                        "openPromotionSettings" -> {
+                            if (Build.VERSION.SDK_INT >= 36) {
+                                startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                                )
+                            }
+                            result.success(null)
+                        }
+                        else -> result.notImplemented()
+                    }
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "donut/system")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:io';
 
@@ -23,6 +24,7 @@ class Reminder {
     required this.body,
     this.untilMin,
     this.alert = true,
+    this.emoji = '',
   });
 
   final int id;
@@ -38,6 +40,9 @@ class Reminder {
   /// Sound and heads-up; off for a countdown that follows a heads-up.
   final bool alert;
 
+  /// The activity's emoji: the countdown's status-bar icon on Android 16+.
+  final String emoji;
+
   bool get isLive => untilMin != null;
 
   @override
@@ -48,10 +53,12 @@ class Reminder {
       other.title == title &&
       other.body == body &&
       other.untilMin == untilMin &&
-      other.alert == alert;
+      other.alert == alert &&
+      other.emoji == emoji;
 
   @override
-  int get hashCode => Object.hash(id, atMin, title, body, untilMin, alert);
+  int get hashCode =>
+      Object.hash(id, atMin, title, body, untilMin, alert, emoji);
 }
 
 /// How early a pin ("Reach by 4:55") notifies, whatever the entries' lead.
@@ -121,6 +128,7 @@ List<Reminder> planReminders(
         ].join(' · '),
         untilMin: b.endMin,
         alert: leadMin == 0 && !started,
+        emoji: activity?.emoji ?? '',
       ),
     );
   }
@@ -227,6 +235,22 @@ class ReminderService {
 
   bool get _android => !kIsWeb && Platform.isAndroid;
 
+  /// Android 16+: countdowns go through native code as Live Updates (a
+  /// status-bar chip with the entry's icon and time left), which the
+  /// plugin can't request. See LiveCountdown.kt.
+  static const _live = MethodChannel('donut/live');
+  bool _native = false;
+
+  Map<String, Object> _liveJson(Reminder r) => {
+    'id': r.id,
+    'at': localDateTimeOf(r.atMin).millisecondsSinceEpoch,
+    'until': localDateTimeOf(r.untilMin!).millisecondsSinceEpoch,
+    'title': r.title,
+    'body': r.body,
+    'emoji': r.emoji,
+    'alert': r.alert,
+  };
+
   Future<void> init() async {
     if (_ready) return;
     // The full database, links included: phones may report old names such
@@ -259,6 +283,18 @@ class ReminderService {
     if ((launch?.didNotificationLaunchApp ?? false) && response != null) {
       _onResponse(response);
     }
+    if (_android) {
+      try {
+        _native = await _live.invokeMethod<bool>('supported') ?? false;
+        _live.setMethodCallHandler((call) async {
+          if (call.method == 'action') action.value = call.arguments as String;
+        });
+        final pending = await _live.invokeMethod<String>('takeAction');
+        if (pending != null) action.value = pending;
+      } catch (e) {
+        debugPrint('Reminders: live updates unavailable: $e');
+      }
+    }
     _ready = true;
     if (!_android) {
       _ticker = Timer.periodic(const Duration(seconds: 30), (_) => _fireDue());
@@ -281,6 +317,18 @@ class ReminderService {
   Future<bool?> notificationsAllowed() async {
     if (!_android) return null;
     return _androidPlugin?.areNotificationsEnabled();
+  }
+
+  /// Whether countdowns show as a status-bar chip; null when the phone
+  /// can't (before Android 16, or not Android).
+  Future<bool?> liveUpdatesAllowed() async {
+    if (!_native) return null;
+    return _live.invokeMethod<bool>('canPromote');
+  }
+
+  /// Donut's "Live updates" switch in the system settings.
+  Future<void> openLiveUpdateSettings() async {
+    if (_native) await _live.invokeMethod<void>('openPromotionSettings');
   }
 
   /// Donut's notification settings, for when the prompt no longer shows.
@@ -312,15 +360,29 @@ class ReminderService {
     _shownLive
       ..clear()
       ..addAll(running.map((r) => r.id));
-    for (final r in running) {
-      await _plugin.show(
-        id: r.id,
-        title: r.title,
-        body: r.body,
-        notificationDetails: _liveDetails(r, now),
+    if (_native) {
+      for (final r in running) {
+        await _live.invokeMethod<void>('show', jsonEncode(_liveJson(r)));
+      }
+      await _live.invokeMethod<void>(
+        'schedule',
+        jsonEncode([
+          for (final r in _pending)
+            if (r.isLive) _liveJson(r),
+        ]),
       );
+    } else {
+      for (final r in running) {
+        await _plugin.show(
+          id: r.id,
+          title: r.title,
+          body: r.body,
+          notificationDetails: _liveDetails(r, now),
+        );
+      }
     }
     for (final r in _pending) {
+      if (_native && r.isLive) continue;
       try {
         await _plugin.zonedSchedule(
           id: r.id,

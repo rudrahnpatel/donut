@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Android 16 Live Updates: the countdown as a status-bar chip. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
     <!-- In-app updates: download the new APK from GitHub Releases and hand
          it to the system installer (the user still confirms the install). -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -42,6 +44,13 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <!-- Live countdown (Android 16+): fires at an entry's start, re-arms after reboot. -->
+        <receiver android:exported="false" android:name=".LiveCountdownReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
             </intent-filter>
         </receiver>
         <!-- Home-screen widget: today's dial with a live hour hand. -->

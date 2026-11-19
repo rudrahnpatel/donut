@@ -63,7 +63,7 @@ flowchart LR
   `usesChronometer` + `chronometerCountDown`, `when` = the end and `timeoutAfter` gives a
   ticking countdown with the app closed, and it survives reboots via the plugin's boot
   receiver. Android 16's status-bar chip ("Live Updates") needs `setRequestPromotedOngoing`,
-  which the plugin can't set; it would mean native scheduling, so it's left for later.
+  which the plugin can't set; on API 36+ countdowns now go through native code instead (see live_update_chip.md).
 - **`apply` cancels only pending notifications** (`cancelAllPendingNotifications`), not
   `cancelAll`. Otherwise every plan change took down a countdown already on screen.
   Countdowns this run has shown are tracked in `_shownLive`, so one whose entry was
