@@ -2,6 +2,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../app/floating_nav_bar.dart';
 import '../../app/theme/theme.dart';
 import '../../core/time/day_minutes.dart';
 import '../../data/db/app_database.dart';
@@ -58,7 +59,12 @@ class AgendaList extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     if (blocks.isEmpty && pins.isEmpty) {
       return ListView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24,
+          24,
+          24 + floatingNavInset(context),
+        ),
         children: [
           ?header,
           const SizedBox(height: 12),
@@ -74,7 +80,7 @@ class AgendaList extends StatelessWidget {
     }
     return SlidableAutoCloseBehavior(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
+        padding: EdgeInsets.fromLTRB(12, 4, 12, 24 + floatingNavInset(context)),
         children: [?header, ..._byTime()],
       ),
     );

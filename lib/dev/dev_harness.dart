@@ -10,6 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:material_ui/material_ui.dart';
 
+import '../app/shell.dart';
 import '../core/time/day_minutes.dart';
 import '../core/time/hlc.dart';
 import '../data/db/app_database.dart';
@@ -29,6 +30,7 @@ import '../features/day/dial_mode.dart';
 /// - `DONUT_HOUR=16`                with `hour`, a fixed hour of today
 /// - `DONUT_SCENE=menu|tasks|label|drag|select|picker`  gesture before the shot
 /// - `DONUT_SCREENSHOT=/abs/path.png` capture the app, then exit
+/// - `DONUT_TAB=0..3`               start on Today / Month / Library / Settings
 class DevHarness {
   DevHarness._(this.env);
 
@@ -63,8 +65,10 @@ class DevHarness {
     } else {
       mode = const DialMode.live();
     }
+    final tab = int.tryParse(env['DONUT_TAB'] ?? '');
     return [
       dialModeProvider.overrideWith(() => DialModeNotifier(mode)),
+      if (tab != null) shellTabProvider.overrideWith(() => ShellTab(tab)),
       onboardingFirstStepProvider.overrideWithValue(
         int.tryParse(env['DONUT_ONBOARD'] ?? '') ?? 0,
       ),

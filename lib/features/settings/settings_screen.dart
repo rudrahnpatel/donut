@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../app/floating_nav_bar.dart';
 import '../../app/providers.dart';
 import '../../data/repos/settings_repo.dart';
 import '../mcp/mcp_provider.dart';
@@ -43,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 32),
+        padding: EdgeInsets.fromLTRB(12, 0, 12, 32 + floatingNavInset(context)),
         children: [
           const _Header('Appearance'),
           Card(

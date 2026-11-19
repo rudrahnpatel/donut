@@ -6,21 +6,28 @@ import 'package:material_ui/material_ui.dart';
 import '../core/time/day_minutes.dart';
 import '../features/calendar/month_screen.dart';
 import '../features/day/day_screen.dart';
+import '../features/day/dial_mode.dart';
 import '../features/library/library_screen.dart';
+import '../features/library/routine_migration.dart';
 import '../features/reminders/reminder_providers.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/sync/sync_controller.dart';
 import '../features/update/update_ui.dart';
 import '../features/widget_bridge/widget_bridge.dart';
 import '../features/work/work_import.dart';
+import 'floating_nav_bar.dart';
 import 'providers.dart';
 
 /// Which top-level destination is showing.
 final shellTabProvider = NotifierProvider<ShellTab, int>(ShellTab.new);
 
 class ShellTab extends Notifier<int> {
+  ShellTab([this._initial = 0]);
+
+  final int _initial;
+
   @override
-  int build() => 0;
+  int build() => _initial;
 
   void set(int i) => state = i;
 }
@@ -36,11 +43,27 @@ class _AppShellState extends ConsumerState<AppShell>
     with WidgetsBindingObserver {
   Timer? _midnight;
 
-  static const _destinations = [
-    (Icons.donut_large_rounded, Icons.donut_small_rounded, 'Today'),
-    (Icons.calendar_month_rounded, Icons.calendar_month_outlined, 'Month'),
-    (Icons.category_rounded, Icons.category_outlined, 'Library'),
-    (Icons.settings_rounded, Icons.settings_outlined, 'Settings'),
+  static const List<FloatingNavDestination> _destinations = [
+    (
+      selectedIcon: Icons.donut_large_rounded,
+      icon: Icons.donut_small_rounded,
+      label: 'Today',
+    ),
+    (
+      selectedIcon: Icons.calendar_month_rounded,
+      icon: Icons.calendar_month_outlined,
+      label: 'Month',
+    ),
+    (
+      selectedIcon: Icons.category_rounded,
+      icon: Icons.category_outlined,
+      label: 'Library',
+    ),
+    (
+      selectedIcon: Icons.settings_rounded,
+      icon: Icons.settings_outlined,
+      label: 'Settings',
+    ),
   ];
 
   @override
@@ -52,6 +75,8 @@ class _AppShellState extends ConsumerState<AppShell>
     startWidgetBridge(ref);
     startWorkImport(ref);
     ref.read(syncControllerProvider.notifier).start();
+    // New routine categories, once this launch's first sync has landed.
+    startRoutineMigration(ref);
     // Android: offer a newer GitHub release (at most every 6 h).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) checkForUpdateOnStart(context, ref);
@@ -93,59 +118,37 @@ class _AppShellState extends ConsumerState<AppShell>
     _midnight = Timer(next.difference(now), _onNewDay);
   }
 
+  /// A tap on the tab already showing goes back to its start: Today
+  /// returns to today's day dial.
+  void _onTab(int i) {
+    final tab = ref.read(shellTabProvider);
+    if (i == tab && i == 0) {
+      ref.read(focusedDayProvider.notifier).set(ref.read(todayProvider));
+      ref.read(dialModeProvider.notifier).set(const DialMode.day());
+    }
+    ref.read(shellTabProvider.notifier).set(i);
+  }
+
   @override
   Widget build(BuildContext context) {
     final tab = ref.watch(shellTabProvider);
-    final wide = MediaQuery.sizeOf(context).width >= 720;
-    final body = IndexedStack(
-      index: tab,
-      children: const [
-        DayScreen(),
-        MonthScreen(),
-        LibraryScreen(),
-        SettingsScreen(),
-      ],
-    );
-
-    if (wide) {
-      return Scaffold(
-        body: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: tab,
-              onDestinationSelected: ref.read(shellTabProvider.notifier).set,
-              labelType: NavigationRailLabelType.all,
-              leading: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('🍩', style: TextStyle(fontSize: 28)),
-              ),
-              destinations: [
-                for (final (sel, icon, label) in _destinations)
-                  NavigationRailDestination(
-                    icon: Icon(icon),
-                    selectedIcon: Icon(sel),
-                    label: Text(label),
-                  ),
-              ],
-            ),
-            Expanded(child: body),
-          ],
-        ),
-      );
-    }
+    // The bar floats over the screens (extendBody), on phones and wide
+    // windows alike; screens pad their lists with `floatingNavInset`.
     return Scaffold(
-      body: body,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: tab,
-        onDestinationSelected: ref.read(shellTabProvider.notifier).set,
-        destinations: [
-          for (final (sel, icon, label) in _destinations)
-            NavigationDestination(
-              icon: Icon(icon),
-              selectedIcon: Icon(sel),
-              label: label,
-            ),
+      extendBody: true,
+      body: IndexedStack(
+        index: tab,
+        children: const [
+          DayScreen(),
+          MonthScreen(),
+          LibraryScreen(),
+          SettingsScreen(),
         ],
+      ),
+      bottomNavigationBar: FloatingNavBar(
+        destinations: _destinations,
+        selectedIndex: tab,
+        onSelected: _onTab,
       ),
     );
   }

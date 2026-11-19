@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../app/floating_nav_bar.dart';
 import '../../app/providers.dart';
 import '../../app/theme/theme.dart';
 import '../../core/time/day_minutes.dart';
@@ -51,46 +52,87 @@ class _ActivitiesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final list = ref.watch(activitiesProvider).value ?? const <ActivityRow>[];
+    final all = ref.watch(allActivitiesProvider).value ?? const <ActivityRow>[];
+    final list = [
+      for (final a in all)
+        if (!a.archived) a,
+    ];
+    final archived = [
+      for (final a in all)
+        if (a.archived) a,
+    ];
     final lib = ref.read(libraryRepoProvider);
-    final brightness = Theme.of(context).brightness;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => editActivity(context, ref, null),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Activity'),
+      floatingActionButton: aboveFloatingNav(
+        context,
+        FloatingActionButton.extended(
+          onPressed: () => editActivity(context, ref, null),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Activity'),
+        ),
       ),
       body: ReorderableListView(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+        padding: EdgeInsets.fromLTRB(12, 8, 12, 96 + floatingNavInset(context)),
+        buildDefaultDragHandles: false,
+        header: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+          child: Text(
+            'Drag ⠿ to reorder (pickers follow this order). Tap one to rename, '
+            'recolour or archive it.',
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ),
         onReorderItem: (from, to) {
           final ids = [for (final a in list) a.id];
           ids.insert(to, ids.removeAt(from));
           lib.reorderActivities(ids);
         },
+        footer: archived.isEmpty
+            ? null
+            : _ArchivedActivities(
+                archived: archived,
+                onRestore: (a) => lib.updateActivity(a.id, archived: false),
+                onEdit: (a) => editActivity(context, ref, a),
+              ),
         children: [
-          for (final a in list)
+          for (final (i, a) in list.indexed)
             Card(
               key: ValueKey(a.id),
               margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: blockColor(a.color, brightness),
-                  child: Text(
-                    a.emoji,
-                    style: emojiStyle.copyWith(fontSize: 20),
-                  ),
-                ),
+                contentPadding: const EdgeInsets.only(left: 16, right: 4),
+                leading: _ActivityAvatar(a),
                 title: Text(a.name),
                 subtitle: a.pinned
                     ? const Text('Pinned to the quick menu')
                     : null,
                 onTap: () => editActivity(context, ref, a),
-                trailing: IconButton(
-                  tooltip: a.pinned ? 'Unpin' : 'Pin to quick menu',
-                  icon: Icon(
-                    a.pinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                  ),
-                  onPressed: () => lib.updateActivity(a.id, pinned: !a.pinned),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: a.pinned ? 'Unpin' : 'Pin to quick menu',
+                      icon: Icon(
+                        a.pinned
+                            ? Icons.push_pin_rounded
+                            : Icons.push_pin_outlined,
+                      ),
+                      onPressed: () =>
+                          lib.updateActivity(a.id, pinned: !a.pinned),
+                    ),
+                    ReorderableDragStartListener(
+                      index: i,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.drag_indicator_rounded,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -98,6 +140,59 @@ class _ActivitiesTab extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _ActivityAvatar extends StatelessWidget {
+  const _ActivityAvatar(this.a);
+
+  final ActivityRow a;
+
+  @override
+  Widget build(BuildContext context) => CircleAvatar(
+    backgroundColor: blockColor(a.color, Theme.of(context).brightness),
+    child: Text(a.emoji, style: emojiStyle.copyWith(fontSize: 20)),
+  );
+}
+
+/// Archived activities, folded away under the list: they are out of the
+/// pickers, but entries filed under them keep their name and colour.
+class _ArchivedActivities extends StatelessWidget {
+  const _ArchivedActivities({
+    required this.archived,
+    required this.onRestore,
+    required this.onEdit,
+  });
+
+  final List<ActivityRow> archived;
+  final void Function(ActivityRow) onRestore;
+  final void Function(ActivityRow) onEdit;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: ExpansionTile(
+      shape: const Border(),
+      collapsedShape: const Border(),
+      leading: const Icon(Icons.inventory_2_outlined),
+      title: Text('Archived (${archived.length})'),
+      children: [
+        for (final a in archived)
+          Opacity(
+            opacity: 0.7,
+            child: ListTile(
+              leading: _ActivityAvatar(a),
+              title: Text(a.name),
+              onTap: () => onEdit(a),
+              trailing: TextButton.icon(
+                onPressed: () => onRestore(a),
+                icon: const Icon(Icons.unarchive_outlined),
+                label: const Text('Restore'),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 Future<void> editActivity(
@@ -114,6 +209,14 @@ Future<void> editActivity(
   if (result == null) return;
   if (result.delete && a != null) {
     await lib.deleteActivity(a.id);
+  } else if (result.toggleArchive && a != null) {
+    await lib.updateActivity(
+      a.id,
+      name: result.name,
+      emoji: result.emoji,
+      color: result.color,
+      archived: !a.archived,
+    );
   } else if (a == null) {
     await lib.addActivity(result.name, result.emoji, result.color);
   } else {
@@ -132,11 +235,15 @@ class _ActivityDraft {
     this.emoji,
     this.color, {
     this.delete = false,
+    this.toggleArchive = false,
   });
   final String name;
   final String emoji;
   final int color;
   final bool delete;
+
+  /// Archive it (or, for an archived one, restore it), keeping any edits.
+  final bool toggleArchive;
 }
 
 class _ActivityEditor extends StatefulWidget {
@@ -224,15 +331,36 @@ class _ActivityEditorState extends State<_ActivityEditor> {
           const SizedBox(height: 20),
           Row(
             children: [
-              if (widget.initial != null)
-                TextButton.icon(
+              if (widget.initial case final a?) ...[
+                IconButton(
+                  tooltip: 'Delete (entries filed under it lose its colour)',
                   onPressed: () => Navigator.pop(
                     context,
                     _ActivityDraft('', '', 0, delete: true),
                   ),
                   icon: const Icon(Icons.delete_outline_rounded),
-                  label: const Text('Delete'),
                 ),
+                TextButton.icon(
+                  onPressed: () {
+                    final name = _name.text.trim();
+                    Navigator.pop(
+                      context,
+                      _ActivityDraft(
+                        name.isEmpty ? a.name : name,
+                        _emoji,
+                        _color,
+                        toggleArchive: true,
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    a.archived
+                        ? Icons.unarchive_outlined
+                        : Icons.archive_outlined,
+                  ),
+                  label: Text(a.archived ? 'Restore' : 'Archive'),
+                ),
+              ],
               const Spacer(),
               FilledButton(
                 onPressed: () {
@@ -270,19 +398,24 @@ class _TodosTab extends ConsumerWidget {
     final names = {for (final a in activities) a.id: '${a.emoji}  ${a.name}'};
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final title = await promptText(
-            context,
-            title: 'New to-do',
-            hint: 'e.g. Chapter 4 notes',
-          );
-          if (title == null || title.trim().isEmpty || !context.mounted) return;
-          final activity = await pickActivity(context);
-          await lib.addTodo(title.trim(), activityId: activity);
-        },
-        icon: const Icon(Icons.add_task_rounded),
-        label: const Text('To-do'),
+      floatingActionButton: aboveFloatingNav(
+        context,
+        FloatingActionButton.extended(
+          onPressed: () async {
+            final title = await promptText(
+              context,
+              title: 'New to-do',
+              hint: 'e.g. Chapter 4 notes',
+            );
+            if (title == null || title.trim().isEmpty || !context.mounted) {
+              return;
+            }
+            final activity = await pickActivity(context);
+            await lib.addTodo(title.trim(), activityId: activity);
+          },
+          icon: const Icon(Icons.add_task_rounded),
+          label: const Text('To-do'),
+        ),
       ),
       body: todos.isEmpty
           ? Center(
@@ -297,7 +430,12 @@ class _TodosTab extends ConsumerWidget {
               ),
             )
           : ListView(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+              padding: EdgeInsets.fromLTRB(
+                12,
+                8,
+                12,
+                96 + floatingNavInset(context),
+              ),
               children: [
                 for (final entry in groups.entries) ...[
                   Padding(
@@ -379,7 +517,7 @@ class _SeriesTab extends ConsumerWidget {
       );
     }
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + floatingNavInset(context)),
       children: [
         for (final s in series)
           Card(
@@ -433,7 +571,7 @@ class _TemplatesTab extends ConsumerWidget {
       );
     }
     return ListView(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + floatingNavInset(context)),
       children: [
         for (final t in templates)
           Card(

@@ -19,3 +19,4 @@
 - [desktop_mcp_server.md](desktop_mcp_server.md) — Linux/Windows app hosts a localhost-only MCP server (127.0.0.1:47821/mcp) so Claude can read and plan days through the same repo paths as the dial; Host/Origin checks, Settings › Claude toggle
 - [android_github_updater.md](android_github_updater.md) — Android in-app updates from GitHub Releases (check, prompt, download, system installer via FileProvider) and the release signing key + tool/release_android.sh
 - [live_update_chip.md](live_update_chip.md) — Android 16+ countdown posted natively as a Live Update (status-bar chip with emoji + time left); not promoted on the Moto build yet
+- [categories_and_floating_nav.md](categories_and_floating_nav.md) — Chores / Job hunt / Projects activities with a one-time post-sync migration re-filing the routine (entries, sketches, repeats, templates), Library archive + drag handles, iOS-style floating blurred nav bar

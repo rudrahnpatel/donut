@@ -104,8 +104,16 @@ final activitiesProvider = StreamProvider<List<ActivityRow>>(
   (ref) => ref.watch(libraryRepoProvider).watchActivities(),
 );
 
+/// Every activity, archived ones too (the Library's archive section).
+final allActivitiesProvider = StreamProvider<List<ActivityRow>>(
+  (ref) =>
+      ref.watch(libraryRepoProvider).watchActivities(includeArchived: true),
+);
+
+/// Id → activity, archived ones included: archiving hides an activity from
+/// the pickers, but entries already filed under it keep its name and colour.
 final activityMapProvider = Provider<Map<String, ActivityRow>>((ref) {
-  final list = ref.watch(activitiesProvider).value ?? const [];
+  final list = ref.watch(allActivitiesProvider).value ?? const [];
   return {for (final a in list) a.id: a};
 });
 

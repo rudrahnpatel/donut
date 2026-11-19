@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../app/floating_nav_bar.dart';
 import '../../app/providers.dart';
 import '../../app/theme/theme.dart';
 import '../../core/time/day_minutes.dart';
@@ -174,7 +175,9 @@ class _DayScreenState extends ConsumerState<DayScreen> {
               ),
             ),
           ),
+          // The agenda scrolls under the floating nav bar; it pads itself.
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 // Swipe anywhere on the header to change day; tap the date for a
@@ -953,19 +956,27 @@ class _DayPageState extends ConsumerState<DayPage> {
                 'Hold an empty spot to pin that moment.',
     );
 
+    // Space taken by the floating nav bar at the bottom.
+    final navInset = floatingNavInset(context);
     return LayoutBuilder(
       builder: (context, c) {
         if (c.maxWidth >= 840) {
           return Row(
             children: [
               Expanded(
-                child: Padding(padding: const EdgeInsets.all(24), child: clock),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + navInset),
+                  child: clock,
+                ),
               ),
               SizedBox(width: 400, child: agenda),
             ],
           );
         }
-        final clockSide = (c.maxHeight * 0.58).clamp(240.0, c.maxWidth - 32);
+        final clockSide = ((c.maxHeight - navInset) * 0.58).clamp(
+          240.0,
+          c.maxWidth - 32,
+        );
         return Column(
           children: [
             Padding(
